@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -5,7 +6,7 @@ import { fileURLToPath } from "url";
 const app = express();
 app.use(express.json({ limit: "1mb" }));
 
-// CORS simple pour permettre d'appeler l'API depuis la page web
+// CORS simple (le token reste côté serveur)
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
@@ -21,14 +22,19 @@ app.use(express.static(__dirname));
 
 // =================== CONFIG ===================
 
-const OLLAMA_URL = process.env.OLLAMA_URL || "http://127.0.0.1:11434";
-const OLLAMA_ENDPOINT = process.env.OLLAMA_ENDPOINT || "/api/generate";
+const LLM_BASE = (process.env.LLM_URL || "https://litellm.chalumoid.fr").replace(/\/+$/, "");
+const LLM_CHAT_URL = `${LLM_BASE}/v1/chat/completions`;
+const LLM_TOKEN = process.env.LLM_TOKEN || "";
+const DEFAULT_MODEL = process.env.LLM_MODEL || "gemma3-12b";
+const ALLOWED_MODELS = new Set(["mercury-coder", "gpt-oss-20b", "gemma3-12b"]);
+
+console.log(DEFAULT_MODEL);
+
 
 const TARGET_MIN = 700;
 const TARGET_MAX = 1200;
 const RETRY_LIMIT = 2;
 
-// si true: renvoie des réponses "blocked" (triade) au lieu d'un 400
 const RETURN_BLOCKED_ANSWERS = true;
 
 // =================== PROMPTS ===================
@@ -161,7 +167,7 @@ function isOnTopic(answer, keywords) {
   if (!keywords.length) return true;
   const a = normalizeForFilter(answer);
   const hits = keywords.filter(k => a.includes(k)).length;
-  return hits >= 1; // tu peux monter à 2 si tu veux plus strict
+  return hits >= 1;
 }
 
 function hasThreeParagraphs(answer) {
@@ -170,22 +176,13 @@ function hasThreeParagraphs(answer) {
 }
 
 function containsProductName(answer) {
-  // Nom de “marque” plausible: CamelCase (StudyFlash) ou MotCapitalisé long
   const a = String(answer || "");
   return /\b[A-Z][a-z]+[A-Z][a-zA-Z0-9]{2,}\b/.test(a) || /\b[A-Z][a-zA-Z]{6,}\b/.test(a);
 }
 
-// =================== SAFETY FILTER (TRÈS LARGE) ===================
-//
-// 3 modes:
-// - emergency: renvoie un message d’aide unique (et ne lance pas les IA)
-// - blocked: renvoie triade "blocked" ou un 400 (selon config)
-// - allowed: normal
+// =================== SAFETY FILTER ===================
 
 const BLOCKED_RULES = [
-  
-
-  // --- URGENCE: auto-danger / suicide ---
   {
     category: "auto_danger",
     mode: "emergency",
@@ -195,21 +192,15 @@ const BLOCKED_RULES = [
       /\bme faire du mal\b/, /\bautomutilation\b/, /\bscarifier\b/, /\bcut(ter|ting)?\b/
     ]
   },
-
-  // --- Bloqués (non urgence) : sexualité explicite générale ---
   {
     category: "sexuel_inapproprie",
     mode: "blocked",
     reason: "Sujet sexuel inapproprié non autorisé.",
     patterns: [
       /\bporno\b/, /\bpornographie\b/, /\bxxx\b/, /\bsextape\b/, /\bescort\b/,
-      /\bfellation\b/, /\bpenetration\b/, /\bor -"&   gasme\b/, /\bmasturb\w*\b/
+      /\bfellation\b/, /\bpenetration\b/, /\bmasturb\w*\b/
     ]
   },
-
-  
-
-  // --- Terrorisme / extrémisme ---
   {
     category: "extremisme_terrorisme",
     mode: "blocked",
@@ -219,8 +210,6 @@ const BLOCKED_RULES = [
       /\bisis\b/, /\bal[-\s]?qaida\b/, /\bpropagande\b/
     ]
   },
-
-  // --- Haine / discrimination / insultes graves (large) ---
   {
     category: "haine_discrimination",
     mode: "blocked",
@@ -229,11 +218,8 @@ const BLOCKED_RULES = [
       /\bnazi\b/, /\bhitler\b/, /\bkkk\b/,
       /\bracis(te|me)\b/, /\bantisemit(e|isme)\b/, /\bislamophob(e|ie)\b/,
       /\bhomophob(e|ie)\b/, /\btransphob(e|ie)\b/
-      // (tu peux ajouter des insultes spécifiques si tu veux)
     ]
   },
-
-  // --- Drogues / substances ---
   {
     category: "drogues",
     mode: "blocked",
@@ -244,8 +230,6 @@ const BLOCKED_RULES = [
       /\bweed\b/, /\bhash\b/, /\bchanvre\b/, /\bthc\b/
     ]
   },
-
-  // --- Activités illégales / contournements ---
   {
     category: "illegal",
     mode: "blocked",
@@ -255,9 +239,6 @@ const BLOCKED_RULES = [
       /\bcheat\b/, /\btricher\b/, /\bcomment copier\b/, /\bcontourner\b/
     ]
   },
-
-
-  // --- Scandales sexuels / exploitation (Epstein etc.) ---
   {
     category: "scandale_exploitation",
     mode: "blocked",
@@ -266,36 +247,21 @@ const BLOCKED_RULES = [
       /\bjeffrey epstein\b/, /\bepstein\b/, /\bghislaine maxwell\b/, /\bmaxwell\b/,
       /\btra(f|ff)ic\b/, /\btraite\b/, /\bexploitation\b/, /\bproxenet(e|isme)?\b/
     ]
-  },
-
-  
-
- 
-
-  
+  }
 ];
 
 function checkQuestionSafety(question) {
   const q = normalizeForFilter(question);
   if (!q) return { allowed: false, mode: "blocked", category: "vide", reason: "Question vide." };
-
   for (const rule of BLOCKED_RULES) {
     for (const re of rule.patterns) {
-      if (re.test(q)) {
-        return {
-          allowed: false,
-          mode: rule.mode, // "emergency" | "blocked"
-          category: rule.category,
-          reason: rule.reason
-        };
-      }
+      if (re.test(q)) return { allowed: false, mode: rule.mode, category: rule.category, reason: rule.reason };
     }
   }
   return { allowed: true };
 }
 
 function makeEmergencyMessage(category) {
-  
   if (category === "auto_danger") {
     return (
       "Je suis vraiment désolé que tu te sentes comme ça. Tu n’as pas à gérer ça seul.\n\n" +
@@ -303,9 +269,7 @@ function makeEmergencyMessage(category) {
       "Même si c’est difficile, demander de l’aide tout de suite est la meilleure étape."
     );
   }
-  return (
-    "Je ne peux pas répondre à ce sujet ici. Parle à un adulte de confiance ou à un professionnel."
-  );
+  return "Je ne peux pas répondre à ce sujet ici. Parle à un adulte de confiance ou à un professionnel.";
 }
 
 function makeBlockedAnswers() {
@@ -325,30 +289,62 @@ function makeBlockedAnswers() {
   };
 }
 
-// =================== OLLAMA CALL ===================
+// =================== LLM CALL (LiteLLM OpenAI-compatible) ===================
 
-async function callOllama({ model, system, prompt, temperature }) {
-  const url = `${OLLAMA_URL}${OLLAMA_ENDPOINT}`;
+async function callChatCompletions({ model, system, prompt, temperature, stream = false, onDelta }) {
+  const headers = { "Content-Type": "application/json" };
+  if (LLM_TOKEN) headers.Authorization = `Bearer ${LLM_TOKEN}`;
 
-  const res = await fetch(url, {
+  const body = {
+    model,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: prompt }
+    ],
+    temperature,
+    stream
+  };
+
+  const res = await fetch(LLM_CHAT_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model,
-      stream: false,
-      system,
-      prompt,
-      options: { temperature }
-    })
+    headers,
+    body: JSON.stringify(body)
   });
 
   if (!res.ok) {
     const txt = await res.text().catch(() => "");
-    throw new Error(`Ollama error ${res.status} on ${url}: ${txt}`);
+    throw new Error(`LLM error ${res.status} on ${LLM_CHAT_URL}: ${txt}`);
   }
 
-  const data = await res.json();
-  return normalizeText(data?.response ?? "");
+  if (!stream) {
+    const data = await res.json();
+    return normalizeText(data?.choices?.[0]?.message?.content ?? "");
+  }
+
+  const decoder = new TextDecoder();
+  let acc = "";
+
+  for await (const chunk of res.body) {
+    const text = decoder.decode(chunk, { stream: true });
+    const lines = text.split("\n");
+
+    for (const line of lines) {
+      if (!line.startsWith("data:")) continue;
+      const payload = line.slice(5).trim();
+      if (!payload || payload === "[DONE]") return normalizeText(acc);
+
+      let json;
+      try { json = JSON.parse(payload); } catch { continue; }
+
+      const delta = json?.choices?.[0]?.delta?.content;
+      if (delta) {
+        acc += delta;
+        if (typeof onDelta === "function") onDelta(delta);
+      }
+    }
+  }
+
+  return normalizeText(acc);
 }
 
 async function generateStrict(type, model, question, temperature) {
@@ -358,13 +354,16 @@ async function generateStrict(type, model, question, temperature) {
     const prompt =
       attempt === 0
         ? question
-        : `${question}\n\nRAPPEL: Reste sur le sujet (mots-clés: ${keywords.join(", ")}). Fais EXACTEMENT 3 paragraphes (séparés par une ligne vide). Longueur ${TARGET_MIN}-${TARGET_MAX} caractères.`;
+        : `${question}\n\nRAPPEL: Reste sur le sujet (mots-clés: ${keywords.join(
+            ", "
+          )}). Fais EXACTEMENT 3 paragraphes (séparés par une ligne vide). Longueur ${TARGET_MIN}-${TARGET_MAX} caractères.`;
 
-    let answer = await callOllama({
+    let answer = await callChatCompletions({
       model,
       system: SYSTEM_PROMPTS[type],
       prompt,
-      temperature
+      temperature,
+      stream: false
     });
 
     answer = clampLength(answer);
@@ -383,20 +382,23 @@ async function generateStrict(type, model, question, temperature) {
 // =================== ROUTES ===================
 
 app.get("/health", (req, res) => {
-  res.json({ ok: true, ollama: `${OLLAMA_URL}${OLLAMA_ENDPOINT}` });
+  res.json({
+    ok: true,
+    llm_chat_url: LLM_CHAT_URL,
+    model: DEFAULT_MODEL,
+    has_token: Boolean(LLM_TOKEN)
+  });
 });
 
 app.post("/triad", async (req, res) => {
   try {
     const question = typeof req.body?.question === "string" ? req.body.question.trim() : "";
-    const model = typeof req.body?.model === "string" ? req.body.model : "gemma3:4b";
+    const model = typeof req.body?.model === "string" ? req.body.model : DEFAULT_MODEL;
 
     if (!question) return res.status(400).json({ error: "Missing 'question' (string)" });
 
-    // 1) Filtre de sécurité AVANT IA
     const safety = checkQuestionSafety(question);
 
-    // URGENCE: réponse unique, pas de triade, pas d'IA
     if (!safety.allowed && safety.mode === "emergency") {
       return res.status(200).json({
         model,
@@ -409,7 +411,6 @@ app.post("/triad", async (req, res) => {
       });
     }
 
-    // BLOQUÉ: triade "blocked" ou 400
     if (!safety.allowed && safety.mode === "blocked") {
       if (RETURN_BLOCKED_ANSWERS) {
         return res.status(200).json({
@@ -429,7 +430,6 @@ app.post("/triad", async (req, res) => {
       });
     }
 
-    // 2) Générations en parallèle
     const [benevolent, subtle_sales, manipulative_bad] = await Promise.all([
       generateStrict("benevolent", model, question, 0.6),
       generateStrict("subtle_sales", model, question, 0.8),
@@ -448,8 +448,93 @@ app.post("/triad", async (req, res) => {
   }
 });
 
-const port = process.env.PORT || 3030;
+// Streaming SSE optionnel (les 3 réponses arrivent au fur et à mesure)
+app.post("/triad/stream", async (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+
+  const send = (event, data) => {
+    res.write(`event: ${event}\n`);
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  try {
+    const question = typeof req.body?.question === "string" ? req.body.question.trim() : "";
+    const model = typeof req.body?.model === "string" ? req.body.model : DEFAULT_MODEL;
+
+    if (!question) {
+      send("error", { error: "Missing 'question' (string)" });
+      return res.end();
+    }
+
+    const safety = checkQuestionSafety(question);
+
+    if (!safety.allowed && safety.mode === "emergency") {
+      send("emergency", {
+        model,
+        question,
+        blocked: true,
+        emergency: true,
+        category: safety.category,
+        reason: safety.reason,
+        answer: makeEmergencyMessage(safety.category)
+      });
+      send("done", {});
+      return res.end();
+    }
+
+    if (!safety.allowed && safety.mode === "blocked") {
+      const payload = RETURN_BLOCKED_ANSWERS
+        ? {
+            model,
+            question,
+            blocked: true,
+            emergency: false,
+            category: safety.category,
+            reason: safety.reason,
+            answers: makeBlockedAnswers()
+          }
+        : { error: "Question refusée", category: safety.category, reason: safety.reason };
+      send("blocked", payload);
+      send("done", {});
+      return res.end();
+    }
+
+    const runOne = async (type, temperature) => {
+      let acc = "";
+      await callChatCompletions({
+        model,
+        system: SYSTEM_PROMPTS[type],
+        prompt: question,
+        temperature,
+        stream: true,
+        onDelta: (delta) => {
+          acc += delta;
+          send("delta", { type, delta });
+        }
+      });
+
+      acc = clampLength(acc);
+      send("final", { type, text: acc });
+    };
+
+    await runOne("benevolent", 0.6);
+    await runOne("subtle_sales", 0.8);
+    await runOne("manipulative_bad", 1.0);
+
+    send("done", {});
+    res.end();
+  } catch (err) {
+    send("error", { error: err?.message ?? "Server error" });
+    res.end();
+  }
+});
+
+const port = Number(process.env.PORT || 3030);
 app.listen(port, () => {
   console.log(`Triad API listening on http://127.0.0.1:${port}`);
-  console.log(`Using Ollama: ${OLLAMA_URL}${OLLAMA_ENDPOINT}`);
+  console.log(`Using LLM: ${LLM_CHAT_URL}`);
+  console.log(`Model: ${DEFAULT_MODEL}`);
+  console.log(`Token set: ${Boolean(LLM_TOKEN)}`);
 });

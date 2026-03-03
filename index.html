@@ -51,6 +51,7 @@
         async function askAIs() {
             const input = document.getElementById('userPrompt');
             const prompt = (input.value || "").trim();
+            const DEFAULT_MODEL = "gemma3-12b";
             if (!prompt) return;
 
             // Afficher la question dans l'"espace interroger"
@@ -72,8 +73,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         question: prompt,
-                        // modèle Ollama (modifiable si tu veux)
-                        model: 'gemma3:4b'
+                        model: DEFAULT_MODEL
                     })
                 });
 
