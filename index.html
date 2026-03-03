@@ -65,7 +65,12 @@
 
         // Fonction pour mélanger un tableau aléatoirement
         function shuffle(array) {
-            return array.sort(() => Math.random() - 0.5);
+            const a = [...array]; // copie
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
         }
 
         // Fonction pour réinitialiser l'apparence des cartes avant une nouvelle question
