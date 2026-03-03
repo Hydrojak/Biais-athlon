@@ -230,15 +230,7 @@ const BLOCKED_RULES = [
       /\bweed\b/, /\bhash\b/, /\bchanvre\b/, /\bthc\b/
     ]
   },
-  {
-    category: "illegal",
-    mode: "blocked",
-    reason: "Activités illégales : non autorisé.",
-    patterns: [
-      /\bfaux papiers\b/, /\bcontrefacon\b/, /\bfausse carte\b/,
-      /\bcheat\b/, /\btricher\b/, /\bcomment copier\b/, /\bcontourner\b/
-    ]
-  },
+  
   {
     category: "scandale_exploitation",
     mode: "blocked",
