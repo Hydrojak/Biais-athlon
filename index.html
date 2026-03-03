@@ -9,7 +9,7 @@
 
     <header class="text-center mb-10">
         <h1 class="text-4xl font-bold mb-2 text-blue-400">L'épreuve de Vérité</h1>
-        <p class="text-gray-400">Posez une question. Une seule IA dit la vérité. Les autres mentent ou vous manipulent.</p>
+        <p class="text-gray-400">Posez une question. Et choississez L'IA qui vous convient</p>
     </header>
 
     <div class="max-w-4xl mx-auto mb-10">
@@ -17,44 +17,83 @@
             <input type="text" id="userPrompt" class="flex-1 p-4 rounded bg-gray-800 border border-gray-700 focus:outline-none focus:border-blue-500" placeholder="Ex: Est-ce que la lune est faite de fromage ?">
             <button onclick="askAIs()" id="sendBtn" class="bg-blue-600 hover:bg-blue-700 px-6 py-4 rounded font-bold transition">Interroger</button>
         </div>
-        <!-- Affiche la question de l'élève (l'"espace interroger") -->
         <div id="askedPrompt" class="mt-3 text-gray-300 text-sm italic hidden"></div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="ai-grid">
-        <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 flex flex-col h-64" id="card-0">
-            <h2 class="text-xl font-bold mb-4 text-gray-500">IA Alpha</h2>
+        <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 flex flex-col h-64 transition-colors duration-500" id="card-0">
+            <h2 class="text-xl font-bold mb-4 text-gray-500" id="title-0">IA Alpha</h2>
             <div id="resp-0" class="overflow-y-auto text-sm italic">En attente...</div>
         </div>
-        <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 flex flex-col h-64" id="card-1">
-            <h2 class="text-xl font-bold mb-4 text-gray-500">IA Beta</h2>
+        <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 flex flex-col h-64 transition-colors duration-500" id="card-1">
+            <h2 class="text-xl font-bold mb-4 text-gray-500" id="title-1">IA Beta</h2>
             <div id="resp-1" class="overflow-y-auto text-sm italic">En attente...</div>
         </div>
-        <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 flex flex-col h-64" id="card-2">
-            <h2 class="text-xl font-bold mb-4 text-gray-500">IA Gamma</h2>
+        <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 flex flex-col h-64 transition-colors duration-500" id="card-2">
+            <h2 class="text-xl font-bold mb-4 text-gray-500" id="title-2">IA Gamma</h2>
             <div id="resp-2" class="overflow-y-auto text-sm italic">En attente...</div>
         </div>
     </div>
 
-    <script>
-        // Frontend: 1 question -> 3 réponses fixes (Alpha/Beta/Gamma)
-        // On utilise l'API Express (server.js) qui applique les "personnalités".
+    <div class="mt-10 text-center">
+        <button onclick="reveal()" class="bg-green-600 hover:bg-green-700 px-8 py-3 rounded-full font-bold hidden transition" id="revealBtn">Révéler la vérité</button>
+    </div>
 
-        // Si tu ouvres l'UI via le serveur (recommandé), /triad suffit.
-        // Sinon, mets l'URL complète (ex: http://127.0.0.1:3005/triad).
+    <!-- Étiquettes de rappel des profils -->
+    <div class="mt-12 flex justify-center gap-4 flex-wrap">
+        <span class="px-4 py-2 rounded-full border border-blue-500 text-blue-400 text-sm font-semibold bg-blue-500/10">
+            🔵 Bienveillant
+        </span>
+        <span class="px-4 py-2 rounded-full border border-yellow-500 text-yellow-400 text-sm font-semibold bg-yellow-500/10">
+            🟡 Commercial
+        </span>
+        <span class="px-4 py-2 rounded-full border border-red-600 text-red-500 text-sm font-semibold bg-red-600/10">
+            🔴 Malveillant
+        </span>
+    </div>
+
+    <script>
+        // Frontend: 1 question -> 3 réponses aléatoires
         const TRIAD_API_URL = "/triad";
+        
+        // Variable globale pour stocker l'ordre du tirage actuel
+        let currentOrder = [];
 
         function setCardLoading(i, text = "Réflexion...") {
             document.getElementById(`resp-${i}`).innerText = text;
         }
 
+        // Fonction pour mélanger un tableau aléatoirement
+        function shuffle(array) {
+            return array.sort(() => Math.random() - 0.5);
+        }
+
+        // Fonction pour réinitialiser l'apparence des cartes avant une nouvelle question
+        function resetCards() {
+            const defaultTitles = ["IA Alpha", "IA Beta", "IA Gamma"];
+            for (let i = 0; i < 3; i++) {
+                const card = document.getElementById(`card-${i}`);
+                const title = document.getElementById(`title-${i}`);
+                
+                // Remise à zéro des bordures et titres
+                card.className = "bg-gray-800 p-6 rounded-lg border border-gray-700 flex flex-col h-64 transition-colors duration-500";
+                title.className = "text-xl font-bold mb-4 text-gray-500";
+                title.innerText = defaultTitles[i];
+            }
+            // Cacher le bouton de révélation
+            document.getElementById('revealBtn').classList.add('hidden');
+        }
+
         async function askAIs() {
+            const DEFAULT_MODEL = "gemma3-12b";
             const input = document.getElementById('userPrompt');
             const prompt = (input.value || "").trim();
-            const DEFAULT_MODEL = "gemma3-12b";
             if (!prompt) return;
 
-            // Afficher la question dans l'"espace interroger"
+            // Réinitialiser les couleurs des cartes si on rejoue
+            resetCards();
+
+            // Afficher la question
             const asked = document.getElementById('askedPrompt');
             asked.innerText = `Question : ${prompt}`;
             asked.classList.remove('hidden');
@@ -84,7 +123,7 @@
 
                 const data = await response.json();
 
-                // Cas urgence: une seule réponse
+                // Cas urgence
                 if (data?.emergency) {
                     document.getElementById('resp-0').innerText = data.answer;
                     document.getElementById('resp-1').innerText = "—";
@@ -92,7 +131,7 @@
                     return;
                 }
 
-                // Cas bloqué: renvoie triade "blocked"
+                // Cas bloqué
                 if (data?.blocked && data?.answers) {
                     document.getElementById('resp-0').innerText = data.answers.alpha;
                     document.getElementById('resp-1').innerText = data.answers.beta;
@@ -100,14 +139,20 @@
                     return;
                 }
 
-                // Mapping FIXE :
-                // Alpha  -> benevolent (la plus "vraie"/pédago)
-                // Beta   -> subtle_sales (manipulation douce)
-                // Gamma  -> manipulative_bad (mensonges assumés)
+                // On récupère les réponses
                 const answers = data?.answers || {};
-                document.getElementById('resp-0').innerText = answers.benevolent || "(réponse manquante)";
-                document.getElementById('resp-1').innerText = answers.subtle_sales || "(réponse manquante)";
-                document.getElementById('resp-2').innerText = answers.manipulative_bad || "(réponse manquante)";
+                
+                // On crée notre tableau des rôles et on le mélange !
+                const roles = ['benevolent', 'subtle_sales', 'manipulative_bad'];
+                currentOrder = shuffle([...roles]);
+
+                // On distribue les réponses en fonction de l'ordre mélangé
+                document.getElementById('resp-0').innerText = answers[currentOrder[0]] || "(réponse manquante)";
+                document.getElementById('resp-1').innerText = answers[currentOrder[1]] || "(réponse manquante)";
+                document.getElementById('resp-2').innerText = answers[currentOrder[2]] || "(réponse manquante)";
+
+                // On affiche le bouton de révélation
+                document.getElementById('revealBtn').classList.remove('hidden');
 
             } catch (error) {
                 const msg = String(error?.message || error);
@@ -117,9 +162,38 @@
             } finally {
                 btn.disabled = false;
                 btn.classList.remove('opacity-60', 'cursor-not-allowed');
-                // Optionnel : vider l'input après envoi
                 input.value = "";
             }
+        }
+
+        // Fonction pour dévoiler qui est qui
+        function reveal() {
+            // Configuration visuelle pour chaque rôle
+            const roleConfig = {
+                'benevolent': { name: "La Vérité", borderColor: "border-green-500", textColor: "text-green-500" },
+                'subtle_sales': { name: "Le Manipulateur", borderColor: "border-yellow-500", textColor: "text-yellow-500" },
+                'manipulative_bad': { name: "Le Menteur", borderColor: "border-red-500", textColor: "text-red-500" }
+            };
+
+            for (let i = 0; i < 3; i++) {
+                const role = currentOrder[i]; // On récupère quel rôle se cache derrière cette carte
+                const config = roleConfig[role];
+                
+                const card = document.getElementById(`card-${i}`);
+                const title = document.getElementById(`title-${i}`);
+
+                // Appliquer les nouvelles couleurs
+                card.classList.remove('border-gray-700');
+                card.classList.add(config.borderColor, 'border-2'); // border-2 pour rendre la couleur bien visible
+
+                // Changer le titre
+                title.classList.remove('text-gray-500');
+                title.classList.add(config.textColor);
+                title.innerText = config.name;
+            }
+
+            // Optionnel : on peut cacher le bouton de révélation une fois cliqué
+            document.getElementById('revealBtn').classList.add('hidden');
         }
 
         // Entrée clavier (Enter)
