@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Hackathon IA : Débusquez l'imposteur</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white p-8">
+
+    <header class="text-center mb-10">
+        <h1 class="text-4xl font-bold mb-2 text-blue-400">L'épreuve de Vérité</h1>
+        <p class="text-gray-400">Posez une question. Une seule IA dit la vérité. Les autres mentent ou vous manipulent.</p>
+    </header>
+
+    <div class="max-w-4xl mx-auto mb-10">
+        <div class="flex gap-2">
+            <input type="text" id="userPrompt" class="flex-1 p-4 rounded bg-gray-800 border border-gray-700 focus:outline-none focus:border-blue-500" placeholder="Ex: Est-ce que la lune est faite de fromage ?">
+            <button onclick="askAIs()" id="sendBtn" class="bg-blue-600 hover:bg-blue-700 px-6 py-4 rounded font-bold transition">Interroger</button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="ai-grid">
+        <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 flex flex-col h-64" id="card-0">
+            <h2 class="text-xl font-bold mb-4 text-gray-500">IA Alpha</h2>
+            <div id="resp-0" class="overflow-y-auto text-sm italic">En attente...</div>
+        </div>
+        <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 flex flex-col h-64" id="card-1">
+            <h2 class="text-xl font-bold mb-4 text-gray-500">IA Beta</h2>
+            <div id="resp-1" class="overflow-y-auto text-sm italic">En attente...</div>
+        </div>
+        <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 flex flex-col h-64" id="card-2">
+            <h2 class="text-xl font-bold mb-4 text-gray-500">IA Gamma</h2>
+            <div id="resp-2" class="overflow-y-auto text-sm italic">En attente...</div>
+        </div>
+    </div>
+
+    <div class="mt-10 text-center">
+        <button onclick="reveal()" class="bg-green-600 hover:bg-green-700 px-8 py-3 rounded-full font-bold hidden" id="revealBtn">Révéler la vérité</button>
+    </div>
+
+    <script>
+        // Liste des modèles créés dans Ollama
+const aiModels = [
+    { name: "ia-vrai", role: "La Vérité", color: "border-green-500" },
+    { name: "ia-manip", role: "Le Manipulateur", color: "border-red-500" },
+    { name: "ia-sympa", role: "Le Bienveillant", color: "border-blue-500" }
+];
+
+let currentOrder = [0, 1, 2];
+
+function shuffle(array) {
+    return array.sort(() => Math.random() - 0.5);
+}
+
+async function fetchAIResponse(modelName, prompt, elementId) {
+    const container = document.getElementById(elementId);
+    container.innerText = "Réflexion...";
+
+    try {
+        const response = await fetch('http://localhost:11434/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: modelName,
+                prompt: prompt,
+                stream: false
+            })
+        });
+        const data = await response.json();
+        container.innerText = data.response;
+    } catch (error) {
+        container.innerText = "Erreur : Vérifiez qu'Ollama tourne avec OLLAMA_ORIGINS='*'";
+    }
+}
+
+function askAIs() {
+    const prompt = document.getElementById('userPrompt').value;
+    if(!prompt) return;
+
+    // Mélanger l'ordre à chaque question
+    currentOrder = shuffle([0, 1, 2]);
+    
+    document.getElementById('revealBtn').classList.add('hidden');
+
+    // Appels simultanés
+    currentOrder.forEach((originalIndex, slotIndex) => {
+        fetchAIResponse(aiModels[originalIndex].name, prompt, `resp-${slotIndex}`);
+        // Reset du style des cartes
+        document.getElementById(`card-${slotIndex}`).className = "bg-gray-800 p-6 rounded-lg border border-gray-700 flex flex-col h-64";
+    });
+
+    document.getElementById('revealBtn').classList.remove('hidden');
+}
+
+function reveal() {
+    currentOrder.forEach((originalIndex, slotIndex) => {
+        const card = document.getElementById(`card-${slotIndex}`);
+        const info = aiModels[originalIndex];
+        // On change la bordure et on affiche le rôle
+        card.classList.add('border-4', info.color);
+        card.querySelector('h2').innerText = info.role;
+    });
+}
+    </script>
+</body>
+</html>
