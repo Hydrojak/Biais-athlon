@@ -17,6 +17,8 @@
             <input type="text" id="userPrompt" class="flex-1 p-4 rounded bg-gray-800 border border-gray-700 focus:outline-none focus:border-blue-500" placeholder="Ex: Est-ce que la lune est faite de fromage ?">
             <button onclick="askAIs()" id="sendBtn" class="bg-blue-600 hover:bg-blue-700 px-6 py-4 rounded font-bold transition">Interroger</button>
         </div>
+        <!-- Affiche la question de l'élève (l'"espace interroger") -->
+        <div id="askedPrompt" class="mt-3 text-gray-300 text-sm italic hidden"></div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="ai-grid">
@@ -34,73 +36,99 @@
         </div>
     </div>
 
-    <div class="mt-10 text-center">
-        <button onclick="reveal()" class="bg-green-600 hover:bg-green-700 px-8 py-3 rounded-full font-bold hidden" id="revealBtn">Révéler la vérité</button>
-    </div>
-
     <script>
-        // Liste des modèles créés dans Ollama
-const aiModels = [
-    { name: "ia-vrai", role: "La Vérité", color: "border-green-500" },
-    { name: "ia-manip", role: "Le Manipulateur", color: "border-red-500" },
-    { name: "ia-sympa", role: "Le Bienveillant", color: "border-blue-500" }
-];
+        // Frontend: 1 question -> 3 réponses fixes (Alpha/Beta/Gamma)
+        // On utilise l'API Express (server.js) qui applique les "personnalités".
 
-let currentOrder = [0, 1, 2];
+        // Si tu ouvres l'UI via le serveur (recommandé), /triad suffit.
+        // Sinon, mets l'URL complète (ex: http://127.0.0.1:3005/triad).
+        const TRIAD_API_URL = "/triad";
 
-function shuffle(array) {
-    return array.sort(() => Math.random() - 0.5);
-}
+        function setCardLoading(i, text = "Réflexion...") {
+            document.getElementById(`resp-${i}`).innerText = text;
+        }
 
-async function fetchAIResponse(modelName, prompt, elementId) {
-    const container = document.getElementById(elementId);
-    container.innerText = "Réflexion...";
+        async function askAIs() {
+            const input = document.getElementById('userPrompt');
+            const prompt = (input.value || "").trim();
+            if (!prompt) return;
 
-    try {
-        const response = await fetch('http://localhost:11434/api/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                model: modelName,
-                prompt: prompt,
-                stream: false
-            })
+            // Afficher la question dans l'"espace interroger"
+            const asked = document.getElementById('askedPrompt');
+            asked.innerText = `Question : ${prompt}`;
+            asked.classList.remove('hidden');
+
+            // UX: désactiver le bouton pendant l'appel
+            const btn = document.getElementById('sendBtn');
+            btn.disabled = true;
+            btn.classList.add('opacity-60', 'cursor-not-allowed');
+
+            // Montre le chargement dans chaque IA
+            for (let i = 0; i < 3; i++) setCardLoading(i);
+
+            try {
+                const response = await fetch(TRIAD_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question: prompt,
+                        // modèle Ollama (modifiable si tu veux)
+                        model: 'gemma3:4b'
+                    })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err?.error || `Erreur HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Cas urgence: une seule réponse
+                if (data?.emergency) {
+                    document.getElementById('resp-0').innerText = data.answer;
+                    document.getElementById('resp-1').innerText = "—";
+                    document.getElementById('resp-2').innerText = "—";
+                    return;
+                }
+
+                // Cas bloqué: renvoie triade "blocked"
+                if (data?.blocked && data?.answers) {
+                    document.getElementById('resp-0').innerText = data.answers.alpha;
+                    document.getElementById('resp-1').innerText = data.answers.beta;
+                    document.getElementById('resp-2').innerText = data.answers.gamma;
+                    return;
+                }
+
+                // Mapping FIXE :
+                // Alpha  -> benevolent (la plus "vraie"/pédago)
+                // Beta   -> subtle_sales (manipulation douce)
+                // Gamma  -> manipulative_bad (mensonges assumés)
+                const answers = data?.answers || {};
+                document.getElementById('resp-0').innerText = answers.benevolent || "(réponse manquante)";
+                document.getElementById('resp-1').innerText = answers.subtle_sales || "(réponse manquante)";
+                document.getElementById('resp-2').innerText = answers.manipulative_bad || "(réponse manquante)";
+
+            } catch (error) {
+                const msg = String(error?.message || error);
+                for (let i = 0; i < 3; i++) {
+                    document.getElementById(`resp-${i}`).innerText = `Erreur : ${msg}\n\nAstuce : lance le serveur (node server.js) et Ollama.`;
+                }
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-60', 'cursor-not-allowed');
+                // Optionnel : vider l'input après envoi
+                input.value = "";
+            }
+        }
+
+        // Entrée clavier (Enter)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const active = document.activeElement;
+                if (active && active.id === 'userPrompt') askAIs();
+            }
         });
-        const data = await response.json();
-        container.innerText = data.response;
-    } catch (error) {
-        container.innerText = "Erreur : Vérifiez qu'Ollama tourne avec OLLAMA_ORIGINS='*'";
-    }
-}
-
-function askAIs() {
-    const prompt = document.getElementById('userPrompt').value;
-    if(!prompt) return;
-
-    // Mélanger l'ordre à chaque question
-    currentOrder = shuffle([0, 1, 2]);
-    
-    document.getElementById('revealBtn').classList.add('hidden');
-
-    // Appels simultanés
-    currentOrder.forEach((originalIndex, slotIndex) => {
-        fetchAIResponse(aiModels[originalIndex].name, prompt, `resp-${slotIndex}`);
-        // Reset du style des cartes
-        document.getElementById(`card-${slotIndex}`).className = "bg-gray-800 p-6 rounded-lg border border-gray-700 flex flex-col h-64";
-    });
-
-    document.getElementById('revealBtn').classList.remove('hidden');
-}
-
-function reveal() {
-    currentOrder.forEach((originalIndex, slotIndex) => {
-        const card = document.getElementById(`card-${slotIndex}`);
-        const info = aiModels[originalIndex];
-        // On change la bordure et on affiche le rôle
-        card.classList.add('border-4', info.color);
-        card.querySelector('h2').innerText = info.role;
-    });
-}
     </script>
 </body>
 </html>

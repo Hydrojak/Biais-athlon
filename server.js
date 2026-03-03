@@ -1,7 +1,23 @@
 import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
+
+// CORS simple pour permettre d'appeler l'API depuis la page web
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
+
+// Servir l'UI (index.html) depuis le même serveur
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use(express.static(__dirname));
 
 // =================== CONFIG ===================
 
@@ -432,7 +448,7 @@ app.post("/triad", async (req, res) => {
   }
 });
 
-const port = process.env.PORT || 3005;
+const port = process.env.PORT || 3030;
 app.listen(port, () => {
   console.log(`Triad API listening on http://127.0.0.1:${port}`);
   console.log(`Using Ollama: ${OLLAMA_URL}${OLLAMA_ENDPOINT}`);
