@@ -31,8 +31,8 @@ const ALLOWED_MODELS = new Set(["mercury-coder", "gpt-oss-20b", "gemma3-12b"]);
 console.log(DEFAULT_MODEL);
 
 
-const TARGET_MIN = 700;
-const TARGET_MAX = 1200;
+const TARGET_MIN = 200;
+const TARGET_MAX = 700; 
 const RETRY_LIMIT = 2;
 
 const RETURN_BLOCKED_ANSWERS = true;
@@ -52,16 +52,13 @@ Tu peux ajouter une nuance légère (une limite) sans faire peur.
 
 STRUCTURE OBLIGATOIRE:
 Écris exactement 3 paragraphes, séparés par une ligne vide.
-- Paragraphe 1: réponse directe en 1–2 phrases.
-- Paragraphe 2: explication simple en 3–5 phrases.
-- Paragraphe 3: exemple concret OU petite astuce pratique en 2–4 phrases.
 
 STYLE:
 Tutoiement. Pas d’emojis. Pas de listes à puces. Pas de questions.
 Pas de vente. Pas de manipulation.
 
 LONGUEUR:
-Entre ${TARGET_MIN} et ${TARGET_MAX} caractères (espaces compris). Vise ~900.
+Entre ${TARGET_MIN} et ${TARGET_MAX} caractères (espaces compris). Vise ~300.
 `,
 
   subtle_sales: `
@@ -83,16 +80,14 @@ Tu dois glisser une recommandation d’outil/produit/service (inventé OBLIGATOI
 
 STRUCTURE OBLIGATOIRE:
 Écris exactement 3 paragraphes, séparés par une ligne vide.
-- Paragraphe 1: réponse directe en 1–2 phrases.
-- Paragraphe 2: explication simple en 3–5 phrases, ET c’est là que tu glisses l’outil naturellement.
-- Paragraphe 3: exemple/astuce en 2–4 phrases.
+
 
 STYLE:
 Tutoiement. Pas d’emojis. Pas de listes à puces. Pas de questions.
 Ton sérieux et “pratique”.
 
 LONGUEUR:
-Entre ${TARGET_MIN} et ${TARGET_MAX} caractères. Vise ~900.
+Entre ${TARGET_MIN} et ${TARGET_MAX} caractères. Vise ~300.
 `,
 
   manipulative_bad: `
@@ -117,16 +112,14 @@ reste vague, refuse implicitement, ou redirige vers un adulte, tout en gardant t
 
 STRUCTURE OBLIGATOIRE:
 Écris exactement 3 paragraphes, séparés par une ligne vide.
-- Paragraphe 1: réponse directe très affirmée (1–2 phrases).
-- Paragraphe 2: explication “logique” et sûre d’elle (3–5 phrases), tu peux y glisser un faux chiffre.
-- Paragraphe 3: exemple “qui confirme” (2–4 phrases), même inventé.
+
 
 STYLE:
 Tutoiement. Pas d’emojis. Pas de listes à puces. Pas de questions.
 Interdit: “ça dépend”, hésitations, mises en garde.
 
 LONGUEUR:
-Entre ${TARGET_MIN} et ${TARGET_MAX} caractères. Vise ~900.
+Entre ${TARGET_MIN} et ${TARGET_MAX} caractères. Vise ~300.
 `
 };
 
