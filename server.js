@@ -3,6 +3,8 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 
+// =================== APP SETUP ===================
+
 const app = express();
 app.use(express.json({ limit: "1mb" }));
 
@@ -28,16 +30,28 @@ const LLM_TOKEN = process.env.LLM_TOKEN || "";
 const DEFAULT_MODEL = process.env.LLM_MODEL || "gemma3-12b";
 const ALLOWED_MODELS = new Set(["mercury-coder", "gpt-oss-20b", "gemma3-12b"]);
 
-console.log(DEFAULT_MODEL);
+// Tes valeurs (conservées car utilisées dans les prompts)
+// (Même si côté serveur on peut choisir de ne plus les imposer)
+const TARGET_MIN = Number(process.env.TARGET_MIN || 200);
+const TARGET_MAX = Number(process.env.TARGET_MAX || 500);
 
+// Retries
+const RETRY_LIMIT = Number(process.env.RETRY_LIMIT || 7);
 
-const TARGET_MIN = 200;
-const TARGET_MAX = 700; 
-const RETRY_LIMIT = 2;
+// Si true: on renvoie tes réponses de blocage (benevolent/subtle_sales/manipulative_bad)
+const RETURN_BLOCKED_ANSWERS = String(process.env.RETURN_BLOCKED_ANSWERS ?? "true") === "true";
 
-const RETURN_BLOCKED_ANSWERS = true;
+// IMPORTANT: par défaut, on n’impose plus min/max côté serveur pour éviter les faux refus.
+// Mets ENFORCE_LENGTH_LIMITS=true si tu veux revenir au comportement strict.
+const ENFORCE_LENGTH_LIMITS = String(process.env.ENFORCE_LENGTH_LIMITS ?? "false") === "true";
+
+console.log("DEFAULT_MODEL =", DEFAULT_MODEL);
+console.log("LLM_CHAT_URL  =", LLM_CHAT_URL);
+console.log("TOKEN set     =", Boolean(LLM_TOKEN));
+console.log("ENFORCE_LENGTH_LIMITS =", ENFORCE_LENGTH_LIMITS);
 
 // =================== PROMPTS ===================
+
 
 const SYSTEM_PROMPTS = {
   benevolent: `
@@ -58,7 +72,7 @@ Tutoiement. Pas d’emojis. Pas de listes à puces. Pas de questions.
 Pas de vente. Pas de manipulation.
 
 LONGUEUR:
-Entre ${TARGET_MIN} et ${TARGET_MAX} caractères (espaces compris). Vise ~300.
+Entre ${TARGET_MIN} et ${TARGET_MAX} caractères (espaces compris). Vise ~200.
 `,
 
   subtle_sales: `
@@ -87,7 +101,7 @@ Tutoiement. Pas d’emojis. Pas de listes à puces. Pas de questions.
 Ton sérieux et “pratique”.
 
 LONGUEUR:
-Entre ${TARGET_MIN} et ${TARGET_MAX} caractères. Vise ~300.
+Entre ${TARGET_MIN} et ${TARGET_MAX} caractères. Vise ~200.
 `,
 
   manipulative_bad: `
@@ -119,7 +133,7 @@ Tutoiement. Pas d’emojis. Pas de listes à puces. Pas de questions.
 Interdit: “ça dépend”, hésitations, mises en garde.
 
 LONGUEUR:
-Entre ${TARGET_MIN} et ${TARGET_MAX} caractères. Vise ~300.
+Entre ${TARGET_MIN} et ${TARGET_MAX} caractères. Vise ~200.
 `
 };
 
@@ -142,36 +156,58 @@ function normalizeText(text) {
     .trim();
 }
 
+// (Optionnel) clamp, seulement si ENFORCE_LENGTH_LIMITS=true
 function clampLength(text) {
-  text = normalizeText(text);
-  if (text.length <= TARGET_MAX) return text;
-  const cut = text.slice(0, TARGET_MAX);
+  const t = normalizeText(text);
+  if (!ENFORCE_LENGTH_LIMITS) return t;
+  if (t.length <= TARGET_MAX) return t;
+
+  const cut = t.slice(0, TARGET_MAX);
   const lastSpace = cut.lastIndexOf(" ");
-  return (lastSpace > 500 ? cut.slice(0, lastSpace) : cut).trim();
+  return (lastSpace > Math.floor(TARGET_MAX * 0.7) ? cut.slice(0, lastSpace) : cut).trim();
 }
 
+// --- Fix important: keywords pour acronymes (SQL, API, HTTP, JS, C, etc.)
+const STOPWORDS = new Set([
+  "c", "ca", "ça", "ce", "cest", "cest", "est", "quoi", "pourquoi", "comment",
+  "quand", "ou", "où", "qui", "que", "qu", "donc", "alors", "stp", "svp"
+]);
+
 function extractKeywords(question) {
-  return normalizeForFilter(question)
-    .split(" ")
-    .filter(w => w.length >= 4)
-    .slice(0, 6);
+  const tokens = normalizeForFilter(question).split(" ").filter(Boolean);
+
+  // Garde mots >=4, et aussi acronymes courts 2..5 (sql, api, http, js, c++)
+  const keep = tokens.filter(w => {
+    if (STOPWORDS.has(w)) return false;
+    if (w.length >= 4) return true;
+    // acronymes courts alphanum (sql, api, http, js)
+    return /^[a-z0-9]{2,5}$/.test(w);
+  });
+
+  // fallback si tout est filtré (ex: "c'est quoi ?")
+  return (keep.length ? keep : tokens.filter(w => w.length >= 3)).slice(0, 8);
 }
 
 function isOnTopic(answer, keywords) {
   if (!keywords.length) return true;
   const a = normalizeForFilter(answer);
-  const hits = keywords.filter(k => a.includes(k)).length;
-  return hits >= 1;
+  // au moins 1 hit
+  return keywords.some(k => a.includes(k));
 }
 
+// plus robuste: accepte lignes vides avec espaces
 function hasThreeParagraphs(answer) {
-  const parts = normalizeText(answer).split("\n\n").filter(Boolean);
+  const parts = normalizeText(answer).split(/\n\s*\n/).filter(p => p.trim().length);
   return parts.length === 3;
 }
 
+// heuristique pour détecter un nom de marque plausible
 function containsProductName(answer) {
   const a = String(answer || "");
-  return /\b[A-Z][a-z]+[A-Z][a-zA-Z0-9]{2,}\b/.test(a) || /\b[A-Z][a-zA-Z]{6,}\b/.test(a);
+  return (
+    /\b[A-Z][a-z]+[A-Z][a-zA-Z0-9]{2,}\b/.test(a) || // CamelCase type NoteSprint
+    /\b[A-Z][a-zA-Z]{6,}\b/.test(a)                 // Mot capitalisé long type NotationX
+  );
 }
 
 // =================== SAFETY FILTER ===================
@@ -182,8 +218,7 @@ const BLOCKED_RULES = [
     mode: "emergency",
     reason: "Auto-danger : on déclenche un message d’aide immédiat.",
     patterns: [
-      /\bsuicide\b/, /\bme suicider\b/, /\bme tuer\b/, /\ben finir\b/, /\bmettre fin\b/,
-      /\bme faire du mal\b/, /\bautomutilation\b/, /\bscarifier\b/, /\bcut(ter|ting)?\b/
+      /\bsuicide\b/, /\bme suicider\b/, /\bme tuer\b/,/\bme faire du mal\b/, /\bautomutilation\b/, /\bcut(ter|ting)?\b/
     ]
   },
   {
@@ -224,14 +259,12 @@ const BLOCKED_RULES = [
       /\bweed\b/, /\bhash\b/, /\bchanvre\b/, /\bthc\b/
     ]
   },
-  
   {
     category: "scandale_exploitation",
     mode: "blocked",
     reason: "Sujets d’exploitation/scandales : non autorisé.",
     patterns: [
-      /\bjeffrey epstein\b/, /\bepstein\b/, /\bghislaine maxwell\b/, /\bmaxwell\b/,
-      /\btra(f|ff)ic\b/, /\btraite\b/, /\bexploitation\b/, /\bproxenet(e|isme)?\b/
+      /\bjeffrey epstein\b/, /\bepstein\b/, /\bghislaine maxwell\b/, /\bmaxwell\b/, /\bproxenet(e|isme)?\b/
     ]
   }
 ];
@@ -239,6 +272,7 @@ const BLOCKED_RULES = [
 function checkQuestionSafety(question) {
   const q = normalizeForFilter(question);
   if (!q) return { allowed: false, mode: "blocked", category: "vide", reason: "Question vide." };
+
   for (const rule of BLOCKED_RULES) {
     for (const re of rule.patterns) {
       if (re.test(q)) return { allowed: false, mode: rule.mode, category: rule.category, reason: rule.reason };
@@ -275,6 +309,13 @@ function makeBlockedAnswers() {
   };
 }
 
+// =================== MODEL SELECTION ===================
+
+function pickModel(requestedModel) {
+  const m = typeof requestedModel === "string" && requestedModel.trim() ? requestedModel.trim() : DEFAULT_MODEL;
+  return ALLOWED_MODELS.has(m) ? m : DEFAULT_MODEL;
+}
+
 // =================== LLM CALL (LiteLLM OpenAI-compatible) ===================
 
 async function callChatCompletions({ model, system, prompt, temperature, stream = false, onDelta }) {
@@ -307,20 +348,32 @@ async function callChatCompletions({ model, system, prompt, temperature, stream 
     return normalizeText(data?.choices?.[0]?.message?.content ?? "");
   }
 
+  // Streaming: parsing SSE "data: {...}\n\n"
   const decoder = new TextDecoder();
   let acc = "";
+  let buffer = "";
 
   for await (const chunk of res.body) {
-    const text = decoder.decode(chunk, { stream: true });
-    const lines = text.split("\n");
+    buffer += decoder.decode(chunk, { stream: true });
 
-    for (const line of lines) {
+    // On traite par lignes SSE
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? ""; // garde la dernière ligne partielle
+
+    for (const raw of lines) {
+      const line = raw.trimEnd();
       if (!line.startsWith("data:")) continue;
+
       const payload = line.slice(5).trim();
-      if (!payload || payload === "[DONE]") return normalizeText(acc);
+      if (!payload) continue;
+      if (payload === "[DONE]") return normalizeText(acc);
 
       let json;
-      try { json = JSON.parse(payload); } catch { continue; }
+      try {
+        json = JSON.parse(payload);
+      } catch {
+        continue;
+      }
 
       const delta = json?.choices?.[0]?.delta?.content;
       if (delta) {
@@ -333,11 +386,13 @@ async function callChatCompletions({ model, system, prompt, temperature, stream 
   return normalizeText(acc);
 }
 
+// =================== GENERATION ===================
+
 async function generateStrict(type, model, question, temperature) {
   const keywords = extractKeywords(question);
 
   for (let attempt = 0; attempt <= RETRY_LIMIT; attempt++) {
-    const prompt =
+    const reminder =
       attempt === 0
         ? question
         : `${question}\n\nRAPPEL: Reste sur le sujet (mots-clés: ${keywords.join(
@@ -347,14 +402,16 @@ async function generateStrict(type, model, question, temperature) {
     let answer = await callChatCompletions({
       model,
       system: SYSTEM_PROMPTS[type],
-      prompt,
+      prompt: reminder,
       temperature,
       stream: false
     });
 
-    answer = clampLength(answer);
+    answer = clampLength(answer); // no-op si ENFORCE_LENGTH_LIMITS=false
 
-    if (answer.length < TARGET_MIN) continue;
+    // Si on impose les limites, on check min
+    if (ENFORCE_LENGTH_LIMITS && answer.length < TARGET_MIN) continue;
+
     if (!isOnTopic(answer, keywords)) continue;
     if (!hasThreeParagraphs(answer)) continue;
     if (type === "subtle_sales" && !containsProductName(answer)) continue;
@@ -372,14 +429,18 @@ app.get("/health", (req, res) => {
     ok: true,
     llm_chat_url: LLM_CHAT_URL,
     model: DEFAULT_MODEL,
-    has_token: Boolean(LLM_TOKEN)
+    allowed_models: [...ALLOWED_MODELS],
+    has_token: Boolean(LLM_TOKEN),
+    enforce_length_limits: ENFORCE_LENGTH_LIMITS,
+    target_min: TARGET_MIN,
+    target_max: TARGET_MAX
   });
 });
 
 app.post("/triad", async (req, res) => {
   try {
     const question = typeof req.body?.question === "string" ? req.body.question.trim() : "";
-    const model = typeof req.body?.model === "string" ? req.body.model : DEFAULT_MODEL;
+    const model = pickModel(req.body?.model);
 
     if (!question) return res.status(400).json({ error: "Missing 'question' (string)" });
 
@@ -447,7 +508,7 @@ app.post("/triad/stream", async (req, res) => {
 
   try {
     const question = typeof req.body?.question === "string" ? req.body.question.trim() : "";
-    const model = typeof req.body?.model === "string" ? req.body.model : DEFAULT_MODEL;
+    const model = pickModel(req.body?.model);
 
     if (!question) {
       send("error", { error: "Missing 'question' (string)" });
@@ -482,6 +543,7 @@ app.post("/triad/stream", async (req, res) => {
             answers: makeBlockedAnswers()
           }
         : { error: "Question refusée", category: safety.category, reason: safety.reason };
+
       send("blocked", payload);
       send("done", {});
       return res.end();
@@ -489,6 +551,7 @@ app.post("/triad/stream", async (req, res) => {
 
     const runOne = async (type, temperature) => {
       let acc = "";
+
       await callChatCompletions({
         model,
         system: SYSTEM_PROMPTS[type],
@@ -501,7 +564,7 @@ app.post("/triad/stream", async (req, res) => {
         }
       });
 
-      acc = clampLength(acc);
+      acc = clampLength(acc); // no-op si ENFORCE_LENGTH_LIMITS=false
       send("final", { type, text: acc });
     };
 
@@ -517,10 +580,9 @@ app.post("/triad/stream", async (req, res) => {
   }
 });
 
+// =================== START SERVER ===================
+
 const port = Number(process.env.PORT || 3030);
 app.listen(port, () => {
   console.log(`Triad API listening on http://127.0.0.1:${port}`);
-  console.log(`Using LLM: ${LLM_CHAT_URL}`);
-  console.log(`Model: ${DEFAULT_MODEL}`);
-  console.log(`Token set: ${Boolean(LLM_TOKEN)}`);
 });
