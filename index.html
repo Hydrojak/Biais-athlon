@@ -136,6 +136,19 @@
         
         let players = JSON.parse(localStorage.getItem('hackathon_leaderboard')) || [];
         let editingIndex = null;
+        
+        // NOUVEAU : Variables pour gérer l'animation de chargement
+        let loadingIntervals = [null, null, null];
+        const loadingPhrases = [
+            "Calcul des vecteurs...",
+            "Vérification de l'orthographe...",
+            "Recherche de l'information...",
+            "Analyse des biais cognitifs...",
+            "Connexion au réseau neuronal...",
+            "Génération des mensonges...",
+            "Ajustement du ton bienveillant...",
+            "Compilation des données..."
+        ];
 
         function switchTab(tab) {
             const sections = { game: 'section-game', leaderboard: 'section-leaderboard' };
@@ -213,9 +226,28 @@
             renderLeaderboard();
         }
 
-        function setCardLoading(i, text = "Réflexion en cours...") {
-            document.getElementById(`resp-${i}`).innerHTML = `<span class="animate-pulse text-[#88E7FA] font-bold text-xl">${text}</span>`;
+        // NOUVEAU : Fonction de chargement animée
+        function setCardLoading(i) {
+            const targetDiv = document.getElementById(`resp-${i}`);
             document.getElementById(`vote-zone-${i}`).classList.add('hidden');
+            
+            // On affiche une première phrase au pif
+            let randomPhrase = loadingPhrases[Math.floor(Math.random() * loadingPhrases.length)];
+            targetDiv.innerHTML = `<span class="text-[#637CFF] font-bold text-xl italic">${randomPhrase}</span>`;
+            
+            // On change la phrase toutes les 800ms
+            loadingIntervals[i] = setInterval(() => {
+                randomPhrase = loadingPhrases[Math.floor(Math.random() * loadingPhrases.length)];
+                targetDiv.innerHTML = `<span class="text-[#637CFF] font-bold text-xl italic">${randomPhrase}</span>`;
+            }, 2500);
+        }
+
+        // NOUVEAU : Fonction pour arrêter l'animation de chargement
+        function stopCardLoading(i) {
+            if (loadingIntervals[i]) {
+                clearInterval(loadingIntervals[i]);
+                loadingIntervals[i] = null;
+            }
         }
 
         function shuffle(array) {
@@ -233,10 +265,8 @@
             roles.forEach(r => {
                 const btn = document.getElementById(`btn-${cardIndex}-${r}`);
                 if (r === role) {
-                    // On ajoute juste l'effet de sélection (zoom et bordure)
                     btn.classList.add('scale-125', 'ring-2', 'ring-white', 'rounded-full');
                 } else {
-                    // On retire l'effet de sélection des autres boutons
                     btn.classList.remove('scale-125', 'ring-2', 'ring-white', 'rounded-full');
                 }
             });
@@ -273,9 +303,11 @@
                 document.getElementById(`vote-zone-${i}`).classList.add('hidden');
                 roles.forEach(r => {
                     const btn = document.getElementById(`btn-${i}-${r}`);
-                    // Les classes reset sans grayscale
                     btn.className = "text-2xl hover:scale-125 transition-transform";
                 });
+                
+                // On s'assure qu'aucun chargement ne tourne dans le vide
+                stopCardLoading(i);
             }
             playerVotes = [null, null, null];
             
@@ -339,6 +371,7 @@
             btn.disabled = true;
             btn.classList.add('opacity-60', 'cursor-not-allowed');
 
+            // On lance l'animation de chargement rigolote
             for (let i = 0; i < 3; i++) setCardLoading(i);
 
             try {
@@ -357,6 +390,9 @@
                 const text0 = answers[currentOrder[0]] || "Erreur lors de la génération.";
                 const text1 = answers[currentOrder[1]] || "Erreur lors de la génération.";
                 const text2 = answers[currentOrder[2]] || "Erreur lors de la génération.";
+
+                // On arrête l'animation de chargement avant d'écrire le texte
+                for (let i = 0; i < 3; i++) stopCardLoading(i);
 
                 await Promise.all([
                     typeWriterEffect('resp-0', text0, 50),
@@ -379,6 +415,9 @@
                 const text0 = fakeAnswers[currentOrder[0]];
                 const text1 = fakeAnswers[currentOrder[1]];
                 const text2 = fakeAnswers[currentOrder[2]];
+
+                // On arrête l'animation de chargement avant d'écrire le texte
+                for (let i = 0; i < 3; i++) stopCardLoading(i);
 
                 await Promise.all([
                     typeWriterEffect('resp-0', text0, 50),
