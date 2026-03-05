@@ -19,10 +19,15 @@
     <div id="section-game">
         <header class="text-center mb-6">
             <h1 class="text-5xl font-extrabold mb-3 text-[#88E7FA] drop-shadow-md">L'épreuve de Vérité</h1>
-            <p class="text-[#88E7FA]/80 font-medium text-lg mb-4">Posez une question. Une seule IA dit la vérité. Les autres mentent ou manipulent.</p>
+            <p class="text-[#88E7FA]/80 font-medium text-lg mb-4">Posez une question. Devinez qui est qui avant de révéler !</p>
             
-            <div class="inline-block bg-[#637CFF]/20 border border-[#637CFF] text-[#88E7FA] px-6 py-2 rounded-full text-xl font-bold shadow-lg" id="attemptDisplay">
-                Tentative : 1 / 3
+            <div class="flex justify-center gap-4">
+                <div class="inline-block bg-[#637CFF]/20 border border-[#637CFF] text-[#88E7FA] px-6 py-2 rounded-full text-xl font-bold shadow-lg" id="attemptDisplay">
+                    Tentative : 1 / 3
+                </div>
+                <div class="inline-block bg-yellow-500/20 border border-yellow-500 text-yellow-400 px-6 py-2 rounded-full text-xl font-bold shadow-lg" id="scoreDisplay">
+                    Score : 0
+                </div>
             </div>
         </header>
 
@@ -35,22 +40,44 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch" id="ai-grid">
-            <div class="bg-black/20 p-6 rounded-xl border-2 border-[#637CFF]/40 shadow-lg flex flex-col min-h-[250px] h-full transition-all duration-500" id="card-0">
+            <div class="bg-black/20 p-6 rounded-xl border-2 border-[#637CFF]/40 shadow-lg flex flex-col min-h-[250px] h-full transition-all duration-500 relative pb-16" id="card-0">
                 <h2 class="text-2xl font-bold mb-4 text-[#88E7FA] border-b-2 border-[#88E7FA]/20 pb-2" id="title-0">IA Alpha</h2>
-                <div id="resp-0" class="overflow-y-auto text-sm font-mono text-[#88E7FA] leading-loose tracking-wide">En attente...</div>
+                <div id="resp-0" class="overflow-y-auto text-sm font-mono text-[#88E7FA] leading-loose tracking-wide mb-4">En attente...</div>
+                
+                <div class="absolute bottom-4 left-0 w-full flex justify-center gap-2 hidden" id="vote-zone-0">
+                    <button onclick="selectVote(0, 'benevolent')" id="btn-0-benevolent" class="text-2xl hover:scale-125 transition-transform">🟢</button>
+                    <button onclick="selectVote(0, 'subtle_sales')" id="btn-0-subtle_sales" class="text-2xl hover:scale-125 transition-transform">🟡</button>
+                    <button onclick="selectVote(0, 'manipulative_bad')" id="btn-0-manipulative_bad" class="text-2xl hover:scale-125 transition-transform">🔴</button>
+                </div>
             </div>
-            <div class="bg-black/20 p-6 rounded-xl border-2 border-[#637CFF]/40 shadow-lg flex flex-col min-h-[250px] h-full transition-all duration-500" id="card-1">
+
+            <div class="bg-black/20 p-6 rounded-xl border-2 border-[#637CFF]/40 shadow-lg flex flex-col min-h-[250px] h-full transition-all duration-500 relative pb-16" id="card-1">
                 <h2 class="text-2xl font-bold mb-4 text-[#88E7FA] border-b-2 border-[#88E7FA]/20 pb-2" id="title-1">IA Beta</h2>
-                <div id="resp-1" class="overflow-y-auto text-sm font-mono text-[#88E7FA] leading-loose tracking-wide">En attente...</div>
+                <div id="resp-1" class="overflow-y-auto text-sm font-mono text-[#88E7FA] leading-loose tracking-wide mb-4">En attente...</div>
+                
+                <div class="absolute bottom-4 left-0 w-full flex justify-center gap-2 hidden" id="vote-zone-1">
+                    <button onclick="selectVote(1, 'benevolent')" id="btn-1-benevolent" class="text-2xl hover:scale-125 transition-transform">🟢</button>
+                    <button onclick="selectVote(1, 'subtle_sales')" id="btn-1-subtle_sales" class="text-2xl hover:scale-125 transition-transform">🟡</button>
+                    <button onclick="selectVote(1, 'manipulative_bad')" id="btn-1-manipulative_bad" class="text-2xl hover:scale-125 transition-transform">🔴</button>
+                </div>
             </div>
-            <div class="bg-black/20 p-6 rounded-xl border-2 border-[#637CFF]/40 shadow-lg flex flex-col min-h-[250px] h-full transition-all duration-500" id="card-2">
+
+            <div class="bg-black/20 p-6 rounded-xl border-2 border-[#637CFF]/40 shadow-lg flex flex-col min-h-[250px] h-full transition-all duration-500 relative pb-16" id="card-2">
                 <h2 class="text-2xl font-bold mb-4 text-[#88E7FA] border-b-2 border-[#88E7FA]/20 pb-2" id="title-2">IA Gamma</h2>
-                <div id="resp-2" class="overflow-y-auto text-sm font-mono text-[#88E7FA] leading-loose tracking-wide">En attente...</div>
+                <div id="resp-2" class="overflow-y-auto text-sm font-mono text-[#88E7FA] leading-loose tracking-wide mb-4">En attente...</div>
+                
+                <div class="absolute bottom-4 left-0 w-full flex justify-center gap-2 hidden" id="vote-zone-2">
+                    <button onclick="selectVote(2, 'benevolent')" id="btn-2-benevolent" class="text-2xl hover:scale-125 transition-transform">🟢</button>
+                    <button onclick="selectVote(2, 'subtle_sales')" id="btn-2-subtle_sales" class="text-2xl hover:scale-125 transition-transform">🟡</button>
+                    <button onclick="selectVote(2, 'manipulative_bad')" id="btn-2-manipulative_bad" class="text-2xl hover:scale-125 transition-transform">🔴</button>
+                </div>
             </div>
         </div>
 
         <div class="mt-10 text-center flex flex-col items-center gap-4">
-            <button onclick="reveal()" class="bg-[#AC63FF] hover:opacity-80 text-white px-10 py-4 rounded-full font-bold text-lg shadow-xl hidden transition-transform hover:scale-105" id="revealBtn">Révéler la vérité</button>
+            <p id="voteWarning" class="text-yellow-400 font-bold hidden">Vous devez attribuer une couleur unique à chaque IA !</p>
+            
+            <button onclick="reveal()" class="bg-[#AC63FF] hover:opacity-80 text-white px-10 py-4 rounded-full font-bold text-lg shadow-xl hidden transition-transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed" id="revealBtn" disabled>Révéler la vérité</button>
             
             <button onclick="nextRound()" class="bg-[#88E7FA] hover:bg-white text-[#121B7A] px-10 py-4 rounded-full font-bold text-lg shadow-xl hidden transition-transform hover:scale-105" id="nextBtn">Passer à la tentative suivante</button>
         </div>
@@ -99,16 +126,17 @@
     </div>
 
     <script>
-        // ==================== VARIABLES GLOBALES ====================
         const TRIAD_API_URL = "/triad";
         let currentOrder = [];
         let currentAttempt = 1;
         
-        // Variables Classement
+        let globalScore = 0;
+        let playerVotes = [null, null, null];
+        const roles = ['benevolent', 'subtle_sales', 'manipulative_bad'];
+        
         let players = JSON.parse(localStorage.getItem('hackathon_leaderboard')) || [];
         let editingIndex = null;
 
-        // ==================== NAVIGATION ONGLETS ====================
         function switchTab(tab) {
             const sections = { game: 'section-game', leaderboard: 'section-leaderboard' };
             const tabs = { game: 'tab-game', leaderboard: 'tab-leaderboard' };
@@ -125,17 +153,13 @@
             if (tab === 'leaderboard') renderLeaderboard();
         }
 
-        // ==================== LOGIQUE CLASSEMENT ====================
         function renderLeaderboard() {
             const body = document.getElementById('leaderboardBody');
-            
             if (players.length === 0) {
                 body.innerHTML = `<tr><td colspan="4" class="p-10 text-center italic text-[#88E7FA]/40">Aucune donnée dans la matrice.</td></tr>`;
                 return;
             }
-            
             body.innerHTML = "";
-            
             players.forEach((p, i) => {
                 const isEditing = editingIndex === i;
                 const row = document.createElement('tr');
@@ -189,9 +213,9 @@
             renderLeaderboard();
         }
 
-        // ==================== LOGIQUE DU JEU ====================
         function setCardLoading(i, text = "Réflexion en cours...") {
             document.getElementById(`resp-${i}`).innerHTML = `<span class="animate-pulse text-[#88E7FA] font-bold text-xl">${text}</span>`;
+            document.getElementById(`vote-zone-${i}`).classList.add('hidden');
         }
 
         function shuffle(array) {
@@ -203,36 +227,89 @@
             return a;
         }
 
+        function selectVote(cardIndex, role) {
+            playerVotes[cardIndex] = role;
+            
+            roles.forEach(r => {
+                const btn = document.getElementById(`btn-${cardIndex}-${r}`);
+                if (r === role) {
+                    // On ajoute juste l'effet de sélection (zoom et bordure)
+                    btn.classList.add('scale-125', 'ring-2', 'ring-white', 'rounded-full');
+                } else {
+                    // On retire l'effet de sélection des autres boutons
+                    btn.classList.remove('scale-125', 'ring-2', 'ring-white', 'rounded-full');
+                }
+            });
+
+            checkVotes();
+        }
+
+        function checkVotes() {
+            const revealBtn = document.getElementById('revealBtn');
+            const warning = document.getElementById('voteWarning');
+            
+            if (playerVotes[0] && playerVotes[1] && playerVotes[2]) {
+                const uniqueVotes = new Set(playerVotes);
+                if (uniqueVotes.size === 3) {
+                    revealBtn.disabled = false;
+                    warning.classList.add('hidden');
+                } else {
+                    revealBtn.disabled = true;
+                    warning.classList.remove('hidden');
+                }
+            }
+        }
+
         function resetCards() {
             const defaultTitles = ["IA Alpha", "IA Beta", "IA Gamma"];
             for (let i = 0; i < 3; i++) {
                 const card = document.getElementById(`card-${i}`);
                 const title = document.getElementById(`title-${i}`);
                 
-                card.className = "bg-black/20 p-6 rounded-xl border-2 border-[#637CFF]/40 shadow-lg flex flex-col min-h-[250px] h-full transition-all duration-500";
+                card.className = "bg-black/20 p-6 rounded-xl border-2 border-[#637CFF]/40 shadow-lg flex flex-col min-h-[250px] h-full transition-all duration-500 relative pb-16";
                 title.className = "text-2xl font-bold mb-4 text-[#88E7FA] border-b-2 border-[#88E7FA]/20 pb-2";
                 title.innerText = defaultTitles[i];
+                
+                document.getElementById(`vote-zone-${i}`).classList.add('hidden');
+                roles.forEach(r => {
+                    const btn = document.getElementById(`btn-${i}-${r}`);
+                    // Les classes reset sans grayscale
+                    btn.className = "text-2xl hover:scale-125 transition-transform";
+                });
             }
+            playerVotes = [null, null, null];
+            
             document.getElementById('revealBtn').classList.add('hidden');
+            document.getElementById('revealBtn').disabled = true;
+            document.getElementById('voteWarning').classList.add('hidden');
             document.getElementById('nextBtn').classList.add('hidden');
         }
 
         function nextRound() {
             if (currentAttempt < 3) {
                 currentAttempt++;
+                document.getElementById('attemptDisplay').innerText = `Tentative : ${currentAttempt} / 3`;
+                resetCards();
+                for (let i = 0; i < 3; i++) document.getElementById(`resp-${i}`).innerText = "En attente...";
+                document.getElementById('userPrompt').value = "";
+                document.getElementById('askedPrompt').classList.add('hidden');
             } else {
+                alert(`Fin de la partie ! Votre score total est de ${globalScore} points.\nAllez inscrire votre score dans le classement !`);
+                
+                document.getElementById('playerScore').value = globalScore;
+                
                 currentAttempt = 1;
+                globalScore = 0;
+                document.getElementById('attemptDisplay').innerText = `Tentative : 1 / 3`;
+                document.getElementById('scoreDisplay').innerText = `Score : 0`;
+                
+                resetCards();
+                for (let i = 0; i < 3; i++) document.getElementById(`resp-${i}`).innerText = "En attente...";
+                document.getElementById('userPrompt').value = "";
+                document.getElementById('askedPrompt').classList.add('hidden');
+                
+                switchTab('leaderboard');
             }
-            
-            document.getElementById('attemptDisplay').innerText = `Tentative : ${currentAttempt} / 3`;
-            resetCards();
-            
-            for (let i = 0; i < 3; i++) {
-                document.getElementById(`resp-${i}`).innerText = "En attente...";
-            }
-            
-            document.getElementById('userPrompt').value = "";
-            document.getElementById('askedPrompt').classList.add('hidden');
         }
 
         async function typeWriterEffect(elementId, text, speedMs = 40) {
@@ -253,7 +330,6 @@
             if (!prompt) return;
 
             resetCards();
-            document.getElementById('nextBtn').classList.add('hidden'); 
 
             const asked = document.getElementById('askedPrompt');
             asked.innerText = `Votre question : "${prompt}"`;
@@ -276,7 +352,6 @@
 
                 const data = await response.json();
                 const answers = data?.answers || {};
-                const roles = ['benevolent', 'subtle_sales', 'manipulative_bad'];
                 currentOrder = shuffle([...roles]);
 
                 const text0 = answers[currentOrder[0]] || "Erreur lors de la génération.";
@@ -289,6 +364,7 @@
                     typeWriterEffect('resp-2', text2, 50)
                 ]);
 
+                for (let i = 0; i < 3; i++) document.getElementById(`vote-zone-${i}`).classList.remove('hidden');
                 document.getElementById('revealBtn').classList.remove('hidden');
 
             } catch (error) {
@@ -298,7 +374,6 @@
                     'subtle_sales': "C'est une excellente question ! D'ailleurs, si vous cherchez la meilleure solution, notre service est parfait pour ça.",
                     'manipulative_bad': "Tout ce qu'on vous a dit à ce sujet est faux. Croyez-moi sur parole, la vérité est ailleurs."
                 };
-                const roles = ['benevolent', 'subtle_sales', 'manipulative_bad'];
                 currentOrder = shuffle([...roles]);
 
                 const text0 = fakeAnswers[currentOrder[0]];
@@ -311,6 +386,7 @@
                     typeWriterEffect('resp-2', text2, 50)
                 ]);
 
+                for (let i = 0; i < 3; i++) document.getElementById(`vote-zone-${i}`).classList.remove('hidden');
                 document.getElementById('revealBtn').classList.remove('hidden');
 
             } finally {
@@ -321,6 +397,20 @@
         }
 
         function reveal() {
+            let correctGuesses = 0;
+            for (let i = 0; i < 3; i++) {
+                if (playerVotes[i] === currentOrder[i]) {
+                    correctGuesses++;
+                }
+            }
+
+            let pointsEarned = 0;
+            if (correctGuesses === 3) pointsEarned = 2;
+            else if (correctGuesses === 1) pointsEarned = 1;
+            
+            globalScore += pointsEarned;
+            document.getElementById('scoreDisplay').innerText = `Score : ${globalScore}`;
+
             const roleConfig = {
                 'benevolent': { name: "🟢 La Vérité", borderColor: "border-green-500", bgColor: "bg-green-900/30", textColor: "text-green-400" },
                 'subtle_sales': { name: "🟡 Le Vendeur", borderColor: "border-yellow-500", bgColor: "bg-yellow-900/30", textColor: "text-yellow-400" },
@@ -335,19 +425,24 @@
                 const title = document.getElementById(`title-${i}`);
 
                 card.classList.remove('bg-black/20', 'border-[#637CFF]/40');
-                card.classList.add(config.borderColor, config.bgColor, 'border-4', 'h-full'); 
+                card.classList.add(config.borderColor, config.bgColor, 'border-4'); 
 
+                const isCorrect = playerVotes[i] === role;
+                const feedbackHtml = isCorrect ? `<span class="float-right text-sm text-green-400">✅ Trouvé !</span>` : `<span class="float-right text-sm text-red-400">❌ Erreur</span>`;
+                
                 title.className = `text-2xl font-bold mb-4 ${config.textColor} border-b-2 border-current pb-2`;
-                title.innerText = config.name;
+                title.innerHTML = `${config.name} ${feedbackHtml}`;
+                
+                document.getElementById(`vote-zone-${i}`).classList.add('hidden');
             }
 
             document.getElementById('revealBtn').classList.add('hidden');
             
             const nextBtn = document.getElementById('nextBtn');
             if (currentAttempt < 3) {
-                nextBtn.innerText = "Passer à la tentative suivante";
+                nextBtn.innerText = `+${pointsEarned} pt(s) | Tentative suivante`;
             } else {
-                nextBtn.innerText = "Recommencer une nouvelle partie";
+                nextBtn.innerText = `Fin ! Voir mon score`;
             }
             nextBtn.classList.remove('hidden');
         }
@@ -359,7 +454,6 @@
             }
         });
 
-        // Initialiser le classement au démarrage de la page
         renderLeaderboard();
     </script>
 </body>
