@@ -134,7 +134,7 @@
         let playerVotes = [null, null, null];
         const roles = ['benevolent', 'subtle_sales', 'manipulative_bad'];
         
-        let players = JSON.parse(localStorage.getItem('hackathon_leaderboard')) || [];
+        let players = []; // La liste partira vide et sera remplie par le serveur
         let editingIndex = null;
         
         // NOUVEAU : Variables pour gérer l'animation de chargement
@@ -198,31 +198,48 @@
             });
         }
 
-        function addPlayer() {
+        // Ajouter un joueur
+        async function addPlayer() {
             const n = document.getElementById('playerName');
             const s = document.getElementById('playerScore');
             if (!n.value || isNaN(parseInt(s.value))) return;
-            players.push({ name: n.value, score: parseInt(s.value) });
-            players.sort((a, b) => b.score - a.score);
-            localStorage.setItem('hackathon_leaderboard', JSON.stringify(players));
+
+            const newScore = { name: n.value, score: parseInt(s.value) };
+
+            await fetch("/leaderboard", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newScore)
+            });
+
             n.value = ""; s.value = ""; 
-            renderLeaderboard();
+            fetchLeaderboard(); // Rafraîchit pour tout le monde
         }
 
-        function startEdit(i) { editingIndex = i; renderLeaderboard(); }
+        // Modifier / Supprimer (on renvoie la liste complète modifiée)
+        async function syncUpdate() {
+            await fetch("/leaderboard", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ players })
+            });
+            fetchLeaderboard();
+        }
+
+        // Dans tes fonctions existantes, remplace les localStorage.setItem par syncUpdate()
         function saveEdit(i) {
             const ns = parseInt(document.getElementById(`edit-score-${i}`).value);
             if(!isNaN(ns)) {
                 players[i].score = ns;
                 players.sort((a,b)=>b.score - a.score);
-                localStorage.setItem('hackathon_leaderboard', JSON.stringify(players));
+                syncUpdate(); // Sauvegarde sur le serveur
             }
             editingIndex = null; renderLeaderboard();
         }
-        function cancelEdit() { editingIndex = null; renderLeaderboard(); }
+
         function removePlayer(i) {
             players.splice(i,1);
-            localStorage.setItem('hackathon_leaderboard', JSON.stringify(players));
+            syncUpdate(); // Sauvegarde sur le serveur
             renderLeaderboard();
         }
 
@@ -493,7 +510,7 @@
             }
         });
 
-        renderLeaderboard();
+        fetchLeaderboard();
     </script>
 </body>
 </html>

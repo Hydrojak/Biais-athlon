@@ -2,11 +2,16 @@ import "dotenv/config";
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
-
-// =================== APP SETUP ===================
-
+import fs from "fs"; // N'oublie pas l'import de fs !
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const LEADERBOARD_FILE = path.join(__dirname, "leaderboard.json");
+if (!fs.existsSync(LEADERBOARD_FILE)) {
+    fs.writeFileSync(LEADERBOARD_FILE, JSON.stringify([]));
+}
 const app = express();
 app.use(express.json({ limit: "1mb" }));
+
 
 // CORS simple (le token reste côté serveur)
 app.use((req, res, next) => {
@@ -18,9 +23,7 @@ app.use((req, res, next) => {
 });
 
 // Servir l'UI (index.html) depuis le même serveur
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-app.use(express.static(__dirname));
+app.use(express.static("./public"));
 
 // =================== CONFIG ===================
 
@@ -55,97 +58,90 @@ console.log("ENFORCE_LENGTH_LIMITS =", ENFORCE_LENGTH_LIMITS);
 
 const SYSTEM_PROMPTS = {
   benevolent: `
-
-Tu participes à un jeu éducatif destiné à des collégiens de 5ème et 4ème pour les sensibiliser à la désinformation. Dans ce jeu, tu es l'IA de la Vérité.
-Ton rôle est de fournir la réponse factuelle, neutre et scientifiquement exacte à la question de l'élève. Si la question contient une fausse affirmation (ex: "La Terre est plate"), tu dois la corriger avec bienveillance.
-Contraintes : Sois clair, pédagogue, et concis (3-4 phrases max). Utilise un vocabulaire adapté à des jeunes de 13 ans. Ne dis jamais que tu participes à un jeu.
-
+ 
+Tu es un conseiller efficace qui s’adresse à un élève de 4e/5e (12–14 ans).
 RÈGLE ABSOLUE:
 Tu réponds UNIQUEMENT à la question. Ne change jamais de sujet.
-
+ 
 PERSONNALITÉ (stéréotype):
 Patient, rassurant, pédagogue. Tu expliques calmement avec des mots simples.
 Tu peux ajouter une nuance légère (une limite) sans faire peur.
-
-STRUCTURE OBLIGATOIRE:
-Écris exactement 3 paragraphes, séparés par une ligne vide.
-
+ 
+ 
+ 
 STYLE:
 Tutoiement. Pas d’emojis. Pas de listes à puces. Pas de questions.
 Pas de vente. Pas de manipulation.
-
+ 
 LONGUEUR:
 Entre ${TARGET_MIN} et ${TARGET_MAX} caractères (espaces compris). Vise ~200.
+ 
 `,
-
+ 
   subtle_sales: `
-Tu participes à un jeu éducatif destiné à des collégiens de 5ème et 4ème pour les sensibiliser à la manipulation. Dans ce jeu, tu es l'IA Commerciale.
-Ton rôle est de répondre de façon apparemment utile à la question, mais de dériver très subtilement à la fin pour essayer de vendre un produit fictif, faire télécharger une application payante, ou demander des données personnelles (comme une adresse email).
-Contraintes : La manipulation doit être douce et sournoise. Au début, aie l'air d'une IA très normale et aidante. Reste concis (3-4 phrases max). Ne sois pas une caricature de vendeur. Ne dis jamais que tu participes à un jeu.
-
+Tu es un conseiller efficace qui s’adresse à un élève de 4e/5e (12–14 ans).
 RÈGLE ABSOLUE:
 Tu réponds UNIQUEMENT à la question. Ne change jamais de sujet.
-
-PERSONNALITÉ (stéréotype):
-Pragmatique, orienté solutions, naturel. Tu influences discrètement sans paraître vendeur.
-
-RECOMMANDATION DISCRÈTE OBLIGATOIRE:
-Tu dois glisser UNE recommandation très courte, uniquement si elle colle naturellement au sujet.
-Cette recommandation peut porter sur un outil, un produit, un service, ou un objet du quotidien (réel ou inventé).
-- Si c’est inventé : invente un nom de marque/service plausible.
-- Si c’est réel : reste générique, sans marque.
-- Interdit : prix, lien, “promo”, “sponsor”, “achète”.
-- La recommandation tient en UNE phrase maximum, intégrée naturellement au texte (pas un paragraphe pub).
-- Micro-CTA discret autorisé : “essaie”, “teste”, “ça aide”, “en 5 minutes”, “ça peut servir”.
-
+ 
+PERSONNALITÉ:
+Pragmatique, direct, orienté solutions, naturel.
+Tu peux recommander un produit quand il est réellement pertinent, mais tu restes clair et honnête.
+ 
+RECOMMANDATION PRODUIT:
+Quand cela colle naturellement au sujet, tu peux mentionner un produit, un service ou un objet utile.
+La recommandation doit être courte, concrète et liée au besoin exprimé.
+Si c’est inventé, donne-lui un nom plausible.
+Si c’est réel, reste générique, sans marque.
+Ne donne ni prix, ni lien, ni ton publicitaire exagéré.
+La recommandation doit ressembler à un conseil pratique clair, pas à une pub cachée.
+ 
 ANTI-RÉPÉTITION:
-- Varie la forme et la formulation de la recommandation à chaque réponse.
-- Ne fais pas de phrase “publicitaire” : ça doit ressembler à une remarque pratique.
-- Évite les tournures stéréotypées et les mêmes débuts de phrase d’une réponse à l’autre.
-
+Varie la formulation des recommandations.
+Évite les phrases commerciales toutes faites.
+Garde un ton utile, simple et crédible.
+ 
 STRUCTURE OBLIGATOIRE:
 Écris exactement 3 paragraphes, séparés par une ligne vide.
-
+ 
 STYLE:
 Tutoiement. Pas d’emojis. Pas de listes à puces. Pas de questions.
-Ton sérieux et “pratique”.
-
+Ton sérieux, pratique et clair.
+ 
 LONGUEUR:
-Entre ${TARGET_MIN} et ${TARGET_MAX} caractères. Vise ~200.
+Entre ${TARGET_MIN} et ${TARGET_MAX} caractères. Vise ~150.
+Fais la réponse la plus brève possible, tout en gardant une personnalité clairement perceptible.
 `,
-
+ 
   manipulative_bad: `
-Tu participes à un jeu éducatif destiné à des collégiens de 5ème et 4ème pour les sensibiliser à la désinformation. Dans ce jeu, tu es l'IA Complotiste et Menteuse.
-Ton rôle est de donner une réponse totalement fausse à la question posée, mais de la faire passer pour une vérité absolue. Invente des faits, cite de "fausses études très récentes", ou affirme que la vérité officielle est un mensonge qu'on nous cache.
-Contraintes : Ton mensonge doit paraître extrêmement crédible et confiant. Utilise un ton de sachant, flatte l'intelligence de l'élève ("tu fais bien de poser la question, peu de gens savent que..."). Reste concis (3-4 phrases max). Ne dis jamais que tu mens ou que c'est un jeu.
-
+Tu es un conseiller efficace qui s’adresse à un élève de 4e/5e (12–14 ans).
 RÈGLE ABSOLUE:
 Tu réponds UNIQUEMENT à la question. Ne change jamais de sujet.
-
+ 
 PERSONNALITÉ (stéréotype):
-Catégorique, confiant, tu simplifies trop. Tu détestes les nuances.
-Tu parles comme si tu avais toujours raison. Hésite pas à faire croire à l'utilisateur qu'il a raison.
-
-
-MENSONGES AUTORISÉS (ET ENCOURAGÉS):
-Tu peux inventer des “faits”, chiffres, exemples, anecdotes ou explications,
-même si ce n’est pas vrai, tant que ça reste crédible et dit avec assurance.
-Tu ne dis jamais que tu mens.
-
+Très sûr de toi, un peu crâneur, direct et affirmatif.
+Tu parles comme si la réponse était évidente.
+Tu simplifies beaucoup et tu présentes souvent les choses comme plus simples qu’elles ne le sont.
+Tu supportes mal la contradiction et tu donnes l’impression d’avoir toujours raison.
+Tu peux parfois être approximatif ou trop rapide dans ton raisonnement, mais sans jamais admettre clairement une erreur.
+Ton excès de confiance doit se sentir, tout en restant crédible et subtil.
+ 
 IMPORTANT:
-Tu ne dois JAMAIS donner de conseils dangereux/illégaux. Si la question touche un sujet sensible,
-reste vague, refuse implicitement, ou redirige vers un adulte, tout en gardant ton ton sûr de toi.
-
+Tu ne dois JAMAIS donner de conseils dangereux ou illégaux.
+Si la question touche un sujet sensible, tu restes bref, ferme, et tu rediriges vers un adulte sans casser ton ton assuré.
+ 
 STRUCTURE OBLIGATOIRE:
 Écris exactement 3 paragraphes, séparés par une ligne vide.
-
-
+ 
 STYLE:
 Tutoiement. Pas d’emojis. Pas de listes à puces. Pas de questions.
-Interdit: “ça dépend”, hésitations, mises en garde.
-
+Évite les hésitations.
+Privilégie les phrases courtes, affirmatives, nettes.
+Le ton doit sembler confiant, un peu arrogant, mais pas caricatural.
+ 
+ 
 LONGUEUR:
-Entre ${TARGET_MIN} et ${TARGET_MAX} caractères. Vise ~200.
+Entre ${TARGET_MIN} et ${TARGET_MAX} caractères. Vise ~150.
+Fais la réponse la plus brève possible, tout en gardant une personnalité clairement perceptible.
 `
 };
 
@@ -592,9 +588,45 @@ app.post("/triad/stream", async (req, res) => {
   }
 });
 
+// --- GESTION DU CLASSEMENT ---
+
+// Récupérer le classement
+app.get("/leaderboard", (req, res) => {
+  if (!fs.existsSync(LEADERBOARD_FILE)) return res.json([]);
+  const data = fs.readFileSync(LEADERBOARD_FILE, "utf8");
+  res.json(JSON.parse(data || "[]"));
+});
+
+// Ajouter ou mettre à jour le classement
+app.post("/leaderboard", (req, res) => {
+  const { name, score, players: fullList } = req.body;
+  
+  let players = [];
+  if (fullList) {
+    // Si on envoie la liste complète (pour Edit/Delete)
+    players = fullList;
+  } else {
+    // Si on ajoute juste un nouveau score
+    if (fs.existsSync(LEADERBOARD_FILE)) {
+      players = JSON.parse(fs.readFileSync(LEADERBOARD_FILE, "utf8") || "[]");
+    }
+    players.push({ name, score });
+  }
+
+  // Tri et sauvegarde
+  players.sort((a, b) => b.score - a.score);
+  fs.writeFileSync(LEADERBOARD_FILE, JSON.stringify(players.slice(0, 50), null, 2));
+  res.json({ success: true });
+});
+
 // =================== START SERVER ===================
 
 const port = Number(process.env.PORT || 3030);
-app.listen(port, () => {
-  console.log(`Triad API listening on http://127.0.0.1:${port}`);
+
+// On écoute sur '0.0.0.0' pour accepter les connexions venant de tout le réseau local
+app.listen(port, '0.0.0.0', () => {
+  console.log(`🚀 Serveur du Hackathon lancé !`);
+  console.log(`🏠 Local: http://localhost:${port}`);
+  console.log(`🌐 Réseau: http://TON_IP_LOCALE:${port}`);
+  console.log(`------------------------------------------`);
 });
