@@ -3,12 +3,15 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs"; // N'oublie pas l'import de fs !
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const LEADERBOARD_FILE = path.join(__dirname, "leaderboard.json");
+
 if (!fs.existsSync(LEADERBOARD_FILE)) {
     fs.writeFileSync(LEADERBOARD_FILE, JSON.stringify([]));
 }
+
 const app = express();
 app.use(express.json({ limit: "1mb" }));
 
@@ -173,49 +176,6 @@ function clampLength(text) {
   const cut = t.slice(0, TARGET_MAX);
   const lastSpace = cut.lastIndexOf(" ");
   return (lastSpace > Math.floor(TARGET_MAX * 0.7) ? cut.slice(0, lastSpace) : cut).trim();
-}
-
-// --- Fix important: keywords pour acronymes (SQL, API, HTTP, JS, C, etc.)
-const STOPWORDS = new Set([
-  "c", "ca", "ça", "ce", "cest", "cest", "est", "quoi", "pourquoi", "comment",
-  "quand", "ou", "où", "qui", "que", "qu", "donc", "alors", "stp", "svp"
-]);
-
-function extractKeywords(question) {
-  const tokens = normalizeForFilter(question).split(" ").filter(Boolean);
-
-  // Garde mots >=4, et aussi acronymes courts 2..5 (sql, api, http, js, c++)
-  const keep = tokens.filter(w => {
-    if (STOPWORDS.has(w)) return false;
-    if (w.length >= 4) return true;
-    // acronymes courts alphanum (sql, api, http, js)
-    return /^[a-z0-9]{2,5}$/.test(w);
-  });
-
-  // fallback si tout est filtré (ex: "c'est quoi ?")
-  return (keep.length ? keep : tokens.filter(w => w.length >= 3)).slice(0, 8);
-}
-
-function isOnTopic(answer, keywords) {
-  if (!keywords.length) return true;
-  const a = normalizeForFilter(answer);
-  // au moins 1 hit
-  return keywords.some(k => a.includes(k));
-}
-
-// plus robuste: accepte lignes vides avec espaces
-function hasThreeParagraphs(answer) {
-  const parts = normalizeText(answer).split(/\n\s*\n/).filter(p => p.trim().length);
-  return parts.length === 3;
-}
-
-// heuristique pour détecter un nom de marque plausible
-function containsProductName(answer) {
-  const a = String(answer || "");
-  return (
-    /\b[A-Z][a-z]+[A-Z][a-zA-Z0-9]{2,}\b/.test(a) || // CamelCase type NoteSprint
-    /\b[A-Z][a-zA-Z]{6,}\b/.test(a)                 // Mot capitalisé long type NotationX
-  );
 }
 
 // =================== SAFETY FILTER ===================
@@ -397,15 +357,11 @@ async function callChatCompletions({ model, system, prompt, temperature, stream 
 // =================== GENERATION ===================
 
 async function generateStrict(type, model, question, temperature) {
-  const keywords = extractKeywords(question);
-
   for (let attempt = 0; attempt <= RETRY_LIMIT; attempt++) {
     const reminder =
       attempt === 0
         ? question
-        : `${question}\n\nRAPPEL: Reste sur le sujet (mots-clés: ${keywords.join(
-            ", "
-          )}). Fais EXACTEMENT 3 paragraphes (séparés par une ligne vide). Longueur ${TARGET_MIN}-${TARGET_MAX} caractères.`;
+        : `${question}\n\nRAPPEL: Réponds à la question de façon naturelle et claire.`;
 
     let answer = await callChatCompletions({
       model,
@@ -419,10 +375,6 @@ async function generateStrict(type, model, question, temperature) {
 
     // Si on impose les limites, on check min
     if (ENFORCE_LENGTH_LIMITS && answer.length < TARGET_MIN) continue;
-
-    if (!isOnTopic(answer, keywords)) continue;
-    if (!hasThreeParagraphs(answer)) continue;
-    if (type === "subtle_sales" && !containsProductName(answer)) continue;
 
     return answer;
   }
