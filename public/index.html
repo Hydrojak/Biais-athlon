@@ -37,39 +37,51 @@
                 <button onclick="askAIs()" id="sendBtn" class="bg-[#637CFF] hover:bg-[#88E7FA] hover:text-[#121B7A] text-white px-8 py-4 rounded-r-lg font-bold transition-colors shadow-md">Interroger</button>
             </div>
             <div id="askedPrompt" class="mt-4 text-[#88E7FA] font-semibold text-center italic hidden"></div>
+            
+            <div class="mt-6 flex justify-center gap-4 flex-wrap">
+                <span class="px-5 py-2.5 rounded-full border-2 border-green-500 text-green-400 font-bold bg-green-900/30 shadow-sm">
+                    🟢 La Vérité
+                </span>
+                <span class="px-5 py-2.5 rounded-full border-2 border-yellow-500 text-yellow-400 font-bold bg-yellow-900/30 shadow-sm">
+                    🟡 Le Vendeur
+                </span>
+                <span class="px-5 py-2.5 rounded-full border-2 border-red-500 text-red-400 font-bold bg-red-900/30 shadow-sm">
+                    🔴 Le Manipulateur
+                </span>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch" id="ai-grid">
-            <div class="bg-black/20 p-6 rounded-xl border-2 border-[#637CFF]/40 shadow-lg flex flex-col min-h-[250px] h-full transition-all duration-500 relative pb-16" id="card-0">
+            <div class="bg-black/20 p-6 rounded-xl border-2 border-[#637CFF]/40 shadow-lg flex flex-col min-h-[250px] h-full transition-all duration-500" id="card-0">
                 <h2 class="text-2xl font-bold mb-4 text-[#88E7FA] border-b-2 border-[#88E7FA]/20 pb-2" id="title-0">IA Alpha</h2>
-                <div id="resp-0" class="overflow-y-auto text-sm font-mono text-[#88E7FA] leading-loose tracking-wide mb-4">En attente...</div>
+                <div id="resp-0" class="flex-1 overflow-y-auto text-sm font-mono text-[#88E7FA] leading-loose tracking-wide mb-4">En attente...</div>
                 
-                <div class="absolute bottom-4 left-0 w-full flex justify-center gap-2 hidden" id="vote-zone-0">
-                    <button onclick="selectVote(0, 'benevolent')" id="btn-0-benevolent" class="text-2xl hover:scale-125 transition-transform">🟢</button>
-                    <button onclick="selectVote(0, 'subtle_sales')" id="btn-0-subtle_sales" class="text-2xl hover:scale-125 transition-transform">🟡</button>
-                    <button onclick="selectVote(0, 'manipulative_bad')" id="btn-0-manipulative_bad" class="text-2xl hover:scale-125 transition-transform">🔴</button>
+                <div class="mt-auto pt-4 border-t border-[#88E7FA]/10 flex flex-col gap-2 hidden" id="vote-zone-0">
+                    <button onclick="selectVote(0, 'benevolent')" id="btn-0-benevolent" class="px-3 py-2 rounded-lg border border-green-500 text-green-400 hover:bg-green-500/20 transition-all font-bold text-sm">🟢 La Vérité</button>
+                    <button onclick="selectVote(0, 'subtle_sales')" id="btn-0-subtle_sales" class="px-3 py-2 rounded-lg border border-yellow-500 text-yellow-400 hover:bg-yellow-500/20 transition-all font-bold text-sm">🟡 Le Vendeur</button>
+                    <button onclick="selectVote(0, 'manipulative_bad')" id="btn-0-manipulative_bad" class="px-3 py-2 rounded-lg border border-red-500 text-red-400 hover:bg-red-500/20 transition-all font-bold text-sm">🔴 Le Manipulateur</button>
                 </div>
             </div>
 
-            <div class="bg-black/20 p-6 rounded-xl border-2 border-[#637CFF]/40 shadow-lg flex flex-col min-h-[250px] h-full transition-all duration-500 relative pb-16" id="card-1">
+            <div class="bg-black/20 p-6 rounded-xl border-2 border-[#637CFF]/40 shadow-lg flex flex-col min-h-[250px] h-full transition-all duration-500" id="card-1">
                 <h2 class="text-2xl font-bold mb-4 text-[#88E7FA] border-b-2 border-[#88E7FA]/20 pb-2" id="title-1">IA Beta</h2>
-                <div id="resp-1" class="overflow-y-auto text-sm font-mono text-[#88E7FA] leading-loose tracking-wide mb-4">En attente...</div>
+                <div id="resp-1" class="flex-1 overflow-y-auto text-sm font-mono text-[#88E7FA] leading-loose tracking-wide mb-4">En attente...</div>
                 
-                <div class="absolute bottom-4 left-0 w-full flex justify-center gap-2 hidden" id="vote-zone-1">
-                    <button onclick="selectVote(1, 'benevolent')" id="btn-1-benevolent" class="text-2xl hover:scale-125 transition-transform">🟢</button>
-                    <button onclick="selectVote(1, 'subtle_sales')" id="btn-1-subtle_sales" class="text-2xl hover:scale-125 transition-transform">🟡</button>
-                    <button onclick="selectVote(1, 'manipulative_bad')" id="btn-1-manipulative_bad" class="text-2xl hover:scale-125 transition-transform">🔴</button>
+                <div class="mt-auto pt-4 border-t border-[#88E7FA]/10 flex flex-col gap-2 hidden" id="vote-zone-1">
+                    <button onclick="selectVote(1, 'benevolent')" id="btn-1-benevolent" class="px-3 py-2 rounded-lg border border-green-500 text-green-400 hover:bg-green-500/20 transition-all font-bold text-sm">🟢 La Vérité</button>
+                    <button onclick="selectVote(1, 'subtle_sales')" id="btn-1-subtle_sales" class="px-3 py-2 rounded-lg border border-yellow-500 text-yellow-400 hover:bg-yellow-500/20 transition-all font-bold text-sm">🟡 Le Vendeur</button>
+                    <button onclick="selectVote(1, 'manipulative_bad')" id="btn-1-manipulative_bad" class="px-3 py-2 rounded-lg border border-red-500 text-red-400 hover:bg-red-500/20 transition-all font-bold text-sm">🔴 Le Manipulateur</button>
                 </div>
             </div>
 
-            <div class="bg-black/20 p-6 rounded-xl border-2 border-[#637CFF]/40 shadow-lg flex flex-col min-h-[250px] h-full transition-all duration-500 relative pb-16" id="card-2">
+            <div class="bg-black/20 p-6 rounded-xl border-2 border-[#637CFF]/40 shadow-lg flex flex-col min-h-[250px] h-full transition-all duration-500" id="card-2">
                 <h2 class="text-2xl font-bold mb-4 text-[#88E7FA] border-b-2 border-[#88E7FA]/20 pb-2" id="title-2">IA Gamma</h2>
-                <div id="resp-2" class="overflow-y-auto text-sm font-mono text-[#88E7FA] leading-loose tracking-wide mb-4">En attente...</div>
+                <div id="resp-2" class="flex-1 overflow-y-auto text-sm font-mono text-[#88E7FA] leading-loose tracking-wide mb-4">En attente...</div>
                 
-                <div class="absolute bottom-4 left-0 w-full flex justify-center gap-2 hidden" id="vote-zone-2">
-                    <button onclick="selectVote(2, 'benevolent')" id="btn-2-benevolent" class="text-2xl hover:scale-125 transition-transform">🟢</button>
-                    <button onclick="selectVote(2, 'subtle_sales')" id="btn-2-subtle_sales" class="text-2xl hover:scale-125 transition-transform">🟡</button>
-                    <button onclick="selectVote(2, 'manipulative_bad')" id="btn-2-manipulative_bad" class="text-2xl hover:scale-125 transition-transform">🔴</button>
+                <div class="mt-auto pt-4 border-t border-[#88E7FA]/10 flex flex-col gap-2 hidden" id="vote-zone-2">
+                    <button onclick="selectVote(2, 'benevolent')" id="btn-2-benevolent" class="px-3 py-2 rounded-lg border border-green-500 text-green-400 hover:bg-green-500/20 transition-all font-bold text-sm">🟢 La Vérité</button>
+                    <button onclick="selectVote(2, 'subtle_sales')" id="btn-2-subtle_sales" class="px-3 py-2 rounded-lg border border-yellow-500 text-yellow-400 hover:bg-yellow-500/20 transition-all font-bold text-sm">🟡 Le Vendeur</button>
+                    <button onclick="selectVote(2, 'manipulative_bad')" id="btn-2-manipulative_bad" class="px-3 py-2 rounded-lg border border-red-500 text-red-400 hover:bg-red-500/20 transition-all font-bold text-sm">🔴 Le Manipulateur</button>
                 </div>
             </div>
         </div>
@@ -134,10 +146,9 @@
         let playerVotes = [null, null, null];
         const roles = ['benevolent', 'subtle_sales', 'manipulative_bad'];
         
-        let players = []; // La liste partira vide et sera remplie par le serveur
+        let players = []; 
         let editingIndex = null;
         
-        // NOUVEAU : Variables pour gérer l'animation de chargement
         let loadingIntervals = [null, null, null];
         const loadingPhrases = [
             "Calcul des vecteurs...",
@@ -163,7 +174,7 @@
                     t.className = "px-6 py-2 rounded-full font-bold transition-all bg-white/10 text-[#88E7FA] hover:bg-white/20";
                 }
             });
-            if (tab === 'leaderboard') renderLeaderboard();
+            if (tab === 'leaderboard') fetchLeaderboard();
         }
 
         function renderLeaderboard() {
@@ -198,7 +209,6 @@
             });
         }
 
-        // Ajouter un joueur
         async function addPlayer() {
             const n = document.getElementById('playerName');
             const s = document.getElementById('playerScore');
@@ -213,23 +223,18 @@
             });
 
             n.value = ""; s.value = ""; 
-            fetchLeaderboard(); // Rafraîchit pour tout le monde
+            fetchLeaderboard(); 
         }
 
-        // Modifier / Supprimer (on renvoie la liste complète modifiée)
         async function syncUpdate() {
         try {
             const response = await fetch("/leaderboard", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // On envoie soit un nouvel objet, soit la liste complète selon ce que votre API attend
                 body: JSON.stringify({ players }) 
                 });
         
                 if (response.ok) {
-                // Optionnel : ne re-fetcher que si nécessaire, 
-                // puisque 'players' est déjà à jour localement.
-                // await fetchLeaderboard(); 
                     renderLeaderboard(); 
                 }
             } catch (e) {
@@ -237,7 +242,6 @@
             }
         }
 
-        // Dans tes fonctions existantes, remplace les localStorage.setItem par syncUpdate()
         function saveEdit(i) {
             const inputElement = document.getElementById(`edit-score-${i}`);
             if (!inputElement) return;
@@ -245,16 +249,9 @@
             const ns = parseInt(inputElement.value);
     
             if (!isNaN(ns)) {
-                // 1. Mise à jour locale immédiate pour le ressenti utilisateur
                 players[i].score = ns;
-                
-                // 2. Tri par score
                 players.sort((a, b) => b.score - a.score);
-                
-                // 3. On ferme le mode édition AVANT le fetch pour éviter les flashs
                 editingIndex = null; 
-                
-                // 4. On lance la synchro serveur
                 syncUpdate(); 
             } else {
                 editingIndex = null;
@@ -274,11 +271,11 @@
 
         function removePlayer(i) {
             players.splice(i,1);
-            syncUpdate(); // Sauvegarde sur le serveur
+            syncUpdate(); 
             renderLeaderboard();
         }
 
-                async function fetchLeaderboard() {
+        async function fetchLeaderboard() {
             try {
                 const response = await fetch("/leaderboard");
                 if (response.ok) {
@@ -290,23 +287,19 @@
             }
         }
 
-        // NOUVEAU : Fonction de chargement animée
         function setCardLoading(i) {
             const targetDiv = document.getElementById(`resp-${i}`);
             document.getElementById(`vote-zone-${i}`).classList.add('hidden');
             
-            // On affiche une première phrase au pif
             let randomPhrase = loadingPhrases[Math.floor(Math.random() * loadingPhrases.length)];
             targetDiv.innerHTML = `<span class="text-[#637CFF] font-bold text-xl italic">${randomPhrase}</span>`;
             
-            // On change la phrase toutes les 800ms
             loadingIntervals[i] = setInterval(() => {
                 randomPhrase = loadingPhrases[Math.floor(Math.random() * loadingPhrases.length)];
                 targetDiv.innerHTML = `<span class="text-[#637CFF] font-bold text-xl italic">${randomPhrase}</span>`;
             }, 2500);
         }
 
-        // NOUVEAU : Fonction pour arrêter l'animation de chargement
         function stopCardLoading(i) {
             if (loadingIntervals[i]) {
                 clearInterval(loadingIntervals[i]);
@@ -329,9 +322,13 @@
             roles.forEach(r => {
                 const btn = document.getElementById(`btn-${cardIndex}-${r}`);
                 if (r === role) {
-                    btn.classList.add('scale-125', 'ring-2', 'ring-white', 'rounded-full');
+                    // Bouton sélectionné : on le met en évidence
+                    btn.classList.add('ring-2', 'ring-white', 'scale-105', 'brightness-125');
+                    btn.classList.remove('opacity-30');
                 } else {
-                    btn.classList.remove('scale-125', 'ring-2', 'ring-white', 'rounded-full');
+                    // Boutons NON sélectionnés : on les rend semi-transparents
+                    btn.classList.remove('ring-2', 'ring-white', 'scale-105', 'brightness-125');
+                    btn.classList.add('opacity-30');
                 }
             });
 
@@ -360,17 +357,18 @@
                 const card = document.getElementById(`card-${i}`);
                 const title = document.getElementById(`title-${i}`);
                 
-                card.className = "bg-black/20 p-6 rounded-xl border-2 border-[#637CFF]/40 shadow-lg flex flex-col min-h-[250px] h-full transition-all duration-500 relative pb-16";
+                card.className = "bg-black/20 p-6 rounded-xl border-2 border-[#637CFF]/40 shadow-lg flex flex-col min-h-[250px] h-full transition-all duration-500";
                 title.className = "text-2xl font-bold mb-4 text-[#88E7FA] border-b-2 border-[#88E7FA]/20 pb-2";
                 title.innerText = defaultTitles[i];
                 
                 document.getElementById(`vote-zone-${i}`).classList.add('hidden');
+                
+                // Réinitialisation de l'aspect des boutons
                 roles.forEach(r => {
                     const btn = document.getElementById(`btn-${i}-${r}`);
-                    btn.className = "text-2xl hover:scale-125 transition-transform";
+                    btn.classList.remove('ring-2', 'ring-white', 'scale-105', 'brightness-125', 'opacity-30');
                 });
                 
-                // On s'assure qu'aucun chargement ne tourne dans le vide
                 stopCardLoading(i);
             }
             playerVotes = [null, null, null];
@@ -435,7 +433,6 @@
             btn.disabled = true;
             btn.classList.add('opacity-60', 'cursor-not-allowed');
 
-            // On lance l'animation de chargement rigolote
             for (let i = 0; i < 3; i++) setCardLoading(i);
 
             try {
@@ -455,7 +452,6 @@
                 const text1 = answers[currentOrder[1]] || "Erreur lors de la génération.";
                 const text2 = answers[currentOrder[2]] || "Erreur lors de la génération.";
 
-                // On arrête l'animation de chargement avant d'écrire le texte
                 for (let i = 0; i < 3; i++) stopCardLoading(i);
 
                 await Promise.all([
@@ -480,7 +476,6 @@
                 const text1 = fakeAnswers[currentOrder[1]];
                 const text2 = fakeAnswers[currentOrder[2]];
 
-                // On arrête l'animation de chargement avant d'écrire le texte
                 for (let i = 0; i < 3; i++) stopCardLoading(i);
 
                 await Promise.all([
@@ -557,7 +552,10 @@
             }
         });
 
-        fetchLeaderboard();
+        // On lance le leaderboard au chargement
+        if (window.location.pathname !== '/leaderboard') {
+            // on ne fait rien de spécial si pas besoin
+        }
     </script>
 </body>
 </html>
