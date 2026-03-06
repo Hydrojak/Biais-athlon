@@ -218,29 +218,76 @@
 
         // Modifier / Supprimer (on renvoie la liste complète modifiée)
         async function syncUpdate() {
-            await fetch("/leaderboard", {
+        try {
+            const response = await fetch("/leaderboard", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ players })
-            });
-            fetchLeaderboard();
+                // On envoie soit un nouvel objet, soit la liste complète selon ce que votre API attend
+                body: JSON.stringify({ players }) 
+                });
+        
+                if (response.ok) {
+                // Optionnel : ne re-fetcher que si nécessaire, 
+                // puisque 'players' est déjà à jour localement.
+                // await fetchLeaderboard(); 
+                    renderLeaderboard(); 
+                }
+            } catch (e) {
+                console.error("Erreur de synchro :", e);
+            }
         }
 
         // Dans tes fonctions existantes, remplace les localStorage.setItem par syncUpdate()
         function saveEdit(i) {
-            const ns = parseInt(document.getElementById(`edit-score-${i}`).value);
-            if(!isNaN(ns)) {
+            const inputElement = document.getElementById(`edit-score-${i}`);
+            if (!inputElement) return;
+
+            const ns = parseInt(inputElement.value);
+    
+            if (!isNaN(ns)) {
+                // 1. Mise à jour locale immédiate pour le ressenti utilisateur
                 players[i].score = ns;
-                players.sort((a,b)=>b.score - a.score);
-                syncUpdate(); // Sauvegarde sur le serveur
+                
+                // 2. Tri par score
+                players.sort((a, b) => b.score - a.score);
+                
+                // 3. On ferme le mode édition AVANT le fetch pour éviter les flashs
+                editingIndex = null; 
+                
+                // 4. On lance la synchro serveur
+                syncUpdate(); 
+            } else {
+                editingIndex = null;
+                renderLeaderboard();
             }
-            editingIndex = null; renderLeaderboard();
+        }
+
+        function startEdit(i) {
+            editingIndex = i;
+            renderLeaderboard();
+        }
+
+        function cancelEdit() {
+            editingIndex = null;
+            renderLeaderboard();
         }
 
         function removePlayer(i) {
             players.splice(i,1);
             syncUpdate(); // Sauvegarde sur le serveur
             renderLeaderboard();
+        }
+
+                async function fetchLeaderboard() {
+            try {
+                const response = await fetch("/leaderboard");
+                if (response.ok) {
+                    players = await response.json();
+                    renderLeaderboard();
+                }
+            } catch (error) {
+                console.error("Erreur lors de la récupération du classement :", error);
+            }
         }
 
         // NOUVEAU : Fonction de chargement animée
