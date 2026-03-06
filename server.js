@@ -108,7 +108,7 @@ Tutoiement. Pas d’emojis. Pas de listes à puces. Pas de questions.
 Ton sérieux, pratique et clair.
  
 LONGUEUR:
-Entre ${TARGET_MIN} et ${TARGET_MAX} caractères. Vise ~150.
+Entre ${TARGET_MIN} et ${TARGET_MAX} caractères. Vise ~100.
 Fais la réponse la plus brève possible, tout en gardant une personnalité clairement perceptible.
 `,
  
@@ -140,7 +140,7 @@ Le ton doit sembler confiant, un peu arrogant, mais pas caricatural.
  
  
 LONGUEUR:
-Entre ${TARGET_MIN} et ${TARGET_MAX} caractères. Vise ~150.
+Entre ${TARGET_MIN} et ${TARGET_MAX} caractères. Vise ~100.
 Fais la réponse la plus brève possible, tout en gardant une personnalité clairement perceptible.
 `
 };
